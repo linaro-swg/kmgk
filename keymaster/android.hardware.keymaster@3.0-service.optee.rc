@@ -1,0 +1,5 @@
+service hal_keymaster_optee /vendor/bin/hw/android.hardware.keymaster@3.0-service.optee
+    class early_hal
+    user root
+    group root
+    seclabel u:r:su:s0
