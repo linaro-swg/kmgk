@@ -1069,7 +1069,8 @@ keymaster_error_t TA_check_permission(const keymaster_key_param_set_t *params,
 
 	DMSG("%s %d", __func__, __LINE__);
 	for (size_t i = 0; i < params->length; i++) {
-		DMSG("in_params->params[%zu].tag = %d", i, params->params[i].tag);
+		DMSG("in_params->params[%zu].tag = %d",
+				i, params->params[i].tag);
 		if (client_id_checked && app_data_checked && *exportable)
 			break;
 		switch (params->params[i].tag) {

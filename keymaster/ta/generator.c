@@ -425,10 +425,10 @@ keymaster_error_t TA_generate_key(const keymaster_algorithm_t algorithm,
 
 	TEE_MemMove(key_material, &type, sizeof(type));
 	padding += sizeof(type);
-	DMSG(padding = %u", padding);
+	DMSG("padding = %u", padding);
 	TEE_MemMove(key_material + padding, &key_size, sizeof(key_size));
 	padding += sizeof(key_size);
-	DMSG(padding = %u", padding);
+	DMSG("padding = %u", padding);
 	for (uint32_t i = 0; i < attr_count; i++) {
 		attr_size = KM_MAX_ATTR_SIZE;
 		TEE_MemMove(key_material + padding, attributes + i,

@@ -150,8 +150,10 @@ int TA_deserialize_key_blob(const uint8_t *in, const uint8_t *end,
 	}
 	TEE_MemMove(&key_blob->key_material_size, in,
 				sizeof(key_blob->key_material_size));
-	EMSG("%s %d key_blob->key_material_size = %zu sizeof(key_blob->key_material_size) = %zu",
-			__func__, __LINE__, key_blob->key_material_size, sizeof(key_blob->key_material_size));
+	DMSG("key_blob->key_material_size = %zu"
+			"sizeof(key_blob->key_material_size) = %zu",
+			key_blob->key_material_size,
+			sizeof(key_blob->key_material_size));
 	in += SIZE_LENGTH;
 	if (IS_OUT_OF_BOUNDS(in, end, key_blob->key_material_size)) {
 		EMSG("Out of input array bounds on deserialization");
