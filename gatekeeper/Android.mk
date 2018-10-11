@@ -51,7 +51,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libutils \
 	android.hardware.gatekeeper@1.0
 
-LOCAL_MULTILIB := 64
+#LOCAL_MULTILIB := 64
 
 include $(BUILD_EXECUTABLE)
 
