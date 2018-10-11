@@ -15,7 +15,8 @@
 
 # Include only for HiKey ones in space separated list
 # E.g. hikey hikey960 hikey970
-ifneq (,$(filter $(TARGET_PRODUCT), hikey))
+# Temporarily disable so that this can be built on multiple platforms
+#ifneq (,$(filter $(TARGET_PRODUCT), hikey))
 LOCAL_PATH:= $(call my-dir)
 
 ################################################################################
@@ -57,4 +58,4 @@ include $(BUILD_EXECUTABLE)
 ################################################################################
 include $(LOCAL_PATH)/ta/Android.mk
 
-endif # Include only for HiKey ones.
+#endif # Include only for HiKey ones.
