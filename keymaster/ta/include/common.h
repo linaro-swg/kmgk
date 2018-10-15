@@ -18,7 +18,7 @@
 #ifndef KEYMASTER_COMMON_H
 #define KEYMASTER_COMMON_H
 
-#define SIZE_LENGTH sizeof(uint64_t)
+#define SIZE_LENGTH sizeof(size_t)
 #define SIZE_OF_ITEM(item) (item ? sizeof(item[0]) : 0)
 #define PARAM_SET_SIZE(parameters) \
             (SIZE_LENGTH + \
