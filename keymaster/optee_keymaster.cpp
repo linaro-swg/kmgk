@@ -269,6 +269,7 @@ error:
 int OpteeKeymasterDevice::osVersion(uint32_t *in) {
     char value[PROPERTY_VALUE_MAX] = {0,};
     char *str = value;
+    *in = 0xFFFFFFFF;
 
     /**
      * system/keymaster/keymaster_configuration.cpp
@@ -279,10 +280,10 @@ int OpteeKeymasterDevice::osVersion(uint32_t *in) {
     ALOGD("%s %d", __func__, __LINE__);
     if (property_get("ro.build.version.release", value, "") <= 0) {
         ALOGE("Error get property ro.build.version.release");
-        *in = 0xFFFFFFFF;
         goto exit;
     }
     ALOGD("%s %d ro.build.version.release value = %s", __func__, __LINE__, value); //8.1.0 or Q
+
     *in = (uint32_t) std::atoi(str) * 10000;
     ALOGD("%s %d *in = %u", __func__, __LINE__, *in); //80000 or 0
     if (str)
@@ -307,7 +308,7 @@ int OpteeKeymasterDevice::osVersion(uint32_t *in) {
      * with the next str = strchr() in the next if statement if str =
      * single digit # without minor versions
      */
-    if ((std::strchr(str, '.') != NULL) && (*in < 80000)) {
+    if (std::strchr(str, '.') != NULL) {
         str = std::strchr(str, '.');
         *in += (uint32_t) std::atoi(str + 1) * 100;
         ALOGD("%s %d *in = %u", __func__, __LINE__, *in); //80100
@@ -315,14 +316,6 @@ int OpteeKeymasterDevice::osVersion(uint32_t *in) {
             ALOGD("%s %d ro.build.version.release str = %s", __func__, __LINE__, str); //.1.0
         else
             ALOGD("%s %d str is null", __func__, __LINE__);
-    } else if (*in < 80000) {
-        *in = 70000; //0xFFFFFFFF;
-        ALOGD("%s %d *in = %u", __func__, __LINE__, *in); //4294967295 = 0xFFFFFFFF
-        if (str)
-            ALOGD("%s %d ro.build.version.release str = %s", __func__, __LINE__, str);
-        else
-            ALOGD("%s %d str is null", __func__, __LINE__);
-        goto exit;
     }
 
     /*
@@ -331,19 +324,12 @@ int OpteeKeymasterDevice::osVersion(uint32_t *in) {
      * single digit # without minor versions
      * possible crash
      */
-    if ((std::strchr(str + 1, '.') != NULL) && (*in < 80000)) {
+    if (std::strchr(str + 1, '.') != NULL) {
         str = std::strchr(str + 1, '.');
         *in += (uint32_t) std::atoi(str + 1);
         ALOGD("%s %d *in = %u", __func__, __LINE__, *in); //80100
         if (str)
             ALOGD("%s %d ro.build.version.release str = %s", __func__, __LINE__, str); //.0
-        else
-            ALOGD("%s %d str is null", __func__, __LINE__);
-    } else if (*in < 80000) {
-        *in = 70000; //0xFFFFFFFF;
-        ALOGD("%s %d *in = %u", __func__, __LINE__, *in);
-        if (str)
-            ALOGD("%s %d ro.build.version.release str = %s", __func__, __LINE__, str); //(null)
         else
             ALOGD("%s %d str is null", __func__, __LINE__);
     }
