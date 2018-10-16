@@ -907,7 +907,8 @@ Return<void> OpteeKeymasterDevice::update(uint64_t operationHandle, const hidl_v
     memset(out, 0, outSize);
     memset(in, 0, inSize);
     ptr = in;
-    ptr += serializeSize(ptr, operationHandle);
+    //ptr += serializeSize(ptr, operationHandle);
+    ptr += serializeOperationHandle(ptr, operationHandle);
     ptr += serializeParamSetWithPresence(ptr, kmInParams);
     ptr += serializeData(ptr, kmInputBlob.data_length, kmInputBlob.data,
                         SIZE_OF_ITEM(kmInputBlob.data));
@@ -1119,6 +1120,12 @@ int OpteeKeymasterDevice::serializeSize(uint8_t *dest, const size_t size) {
     ALOGD("%s %d", __func__, __LINE__);
     memcpy(dest, &size, sizeof(size));
     return sizeof(size);
+}
+
+int OpteeKeymasterDevice::serializeOperationHandle(uint8_t *dest, const uint64_t handle) {
+    ALOGD("%s %d", __func__, __LINE__);
+    memcpy(dest, &handle, sizeof(handle));
+    return sizeof(handle);
 }
 
 int OpteeKeymasterDevice::serializeParamSet(uint8_t *dest,

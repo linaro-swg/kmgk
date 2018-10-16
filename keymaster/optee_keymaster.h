@@ -105,6 +105,7 @@ private:
     int serializeData(uint8_t *dest, const size_t count,
 			const uint8_t *source, const size_t objSize);
     int serializeSize(uint8_t *dest, const size_t size);
+    int serializeOperationHandle(uint8_t *dest, const uint64_t handle);
     int serializeParamSet(uint8_t *dest,
 			const KmParamSet &paramSet);
     int serializePresence(uint8_t *dest, const presence p);
