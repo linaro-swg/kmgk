@@ -18,6 +18,7 @@
 #ifndef ANDROID_OPTEE_KEYSTORE_TA_H
 #define ANDROID_OPTEE_KEYSTORE_TA_H
 
+#include <pta_system.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,12 +43,14 @@
 		{ 0x273fcb14, 0xe831, 0x4cf2, \
 			{ 0x93, 0xc4, 0x76, 0x15, 0xdb, 0xd3, 0x0e, 0x90 } }
 
+#if 0
 /* RNG entropy static TA */
 #define RNG_ENTROPY_UUID \
 		{ 0x57ff3310, 0x0919, 0x4935, \
 			{ 0xb9, 0xc8, 0x32, 0xa4, 0x1d, 0x94, 0xb9, 0x5b } }
 
 #define CMD_ADD_RNG_ENTROPY 0
+#endif
 
 /* Empty definitions */
 #define EMPTY_CERT_CHAIN {.entries = NULL, .entry_count = 0}

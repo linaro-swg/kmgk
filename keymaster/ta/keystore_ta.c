@@ -33,7 +33,7 @@ TEE_Result TA_CreateEntryPoint(void)
 	TEE_Param	params[TEE_NUM_PARAMS];
 
 	const TEE_UUID asn1_parser_uuid = ASN1_PARSER_UUID;
-	const TEE_UUID rng_entropy_uuid = RNG_ENTROPY_UUID;
+	const TEE_UUID rng_entropy_uuid = PTA_SYSTEM_UUID /*RNG_ENTROPY_UUID*/;
 
 	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_NONE,
 						   TEE_PARAM_TYPE_NONE,
@@ -175,7 +175,8 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 	params_tee[0].memref.buffer = data;
 	params_tee[0].memref.size = data_length;
 	res = TEE_InvokeTACommand(session_rngSTA, TEE_TIMEOUT_INFINITE,
-				CMD_ADD_RNG_ENTROPY, sta_param_types, params_tee, NULL);
+			PTA_SYSTEM_ADD_RNG_ENTROPY /*CMD_ADD_RNG_ENTROPY*/,
+			sta_param_types, params_tee, NULL);
 	if (res != TEE_SUCCESS) {
 		EMSG("Invoke command for RNG static TA failed, res=%x", res);
 		goto out;
