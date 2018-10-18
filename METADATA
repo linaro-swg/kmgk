@@ -1,0 +1,17 @@
+name: "optee"
+description:
+    "Keymaster and Gatekeeper HIDL HAL for the OP-TEE trusted OS."
+
+third_party {
+  url {
+    type: HOMEPAGE
+    value: "https://www.op-tee.org/"
+  }
+  url {
+    type: ARCHIVE
+    value: "https://github.com/linaro-swg/kmgk.git"
+  }
+  version: "3.4.1"
+  last_upgrade_date { year: 2019 month: 6 day: 24 }
+  license_type: PERMISSIVE
+}
