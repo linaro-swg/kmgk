@@ -18,6 +18,7 @@
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
 #include <utee_defines.h>
+#include <yaml.h>
 
 #include "common.h"
 #include "ta_ca_defs.h"
@@ -131,6 +132,12 @@ static uint32_t TA_possibe_size(const uint32_t type, const uint32_t key_size,
 //Adds caller-provided entropy to the pool
 static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 {
+
+	yaml_parser_t parser;
+	yaml_document_t document;
+	yaml_node_t *node;
+	int i = 1;
+
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	size_t  in_size = 0;
@@ -143,47 +150,38 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 						TEE_PARAM_TYPE_NONE);
 	TEE_Param params_tee[TEE_NUM_PARAMS];
 	keymaster_error_t res = KM_ERROR_OK;
+	/* Parser init*/
+	if (!yaml_parser_initialize(&parser))
+		EMSG("Can't init parser");
 
 	in = (uint8_t *) params[0].memref.buffer;
 	in_size = (size_t) params[0].memref.size;
-	in_end = in + in_size;
 
 	DMSG("%s %d", __func__, __LINE__);
-	if (in_size == 0)
-		return KM_ERROR_OK;
-	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(data_length))) {
-		EMSG("Out of input array bounds on deserialization");
-		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
-	}
-	TEE_MemMove(&data_length, in, sizeof(data_length));
-	in += sizeof(data_length);
-	if (IS_OUT_OF_BOUNDS(in, in_end, data_length)) {
-		EMSG("Out of input array bounds on deserialization");
-		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
-	}
-	data = TEE_Malloc(data_length, TEE_MALLOC_FILL_ZERO);
-	if (!data) {
-		EMSG("Failed to allocate memory for data");
-		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
-	}
-	TEE_MemMove(data, in, data_length);
-	if (session_rngSTA == TEE_HANDLE_NULL) {
-		EMSG("Session with RNG static TA is not opened");
-		res = KM_ERROR_SECURE_HW_COMMUNICATION_FAILED;
-		goto out;
-	}
-	params_tee[0].memref.buffer = data;
-	params_tee[0].memref.size = data_length;
-	res = TEE_InvokeTACommand(session_rngSTA, TEE_TIMEOUT_INFINITE,
-			PTA_SYSTEM_ADD_RNG_ENTROPY /*CMD_ADD_RNG_ENTROPY*/,
-			sta_param_types, params_tee, NULL);
-	if (res != TEE_SUCCESS) {
-		EMSG("Invoke command for RNG static TA failed, res=%x", res);
-		goto out;
-	}
-out:
-	if (data)
-		TEE_Free(data);
+
+	DMSG("YAML: \n%s", in);
+
+	yaml_parser_set_input_string(&parser, in, in_size);
+
+	DMSG("Parsing YAML... \n");
+	if (!yaml_parser_load(&parser, &document))
+		return KM_ERROR_UNKNOWN_ERROR;
+
+	do {
+		node = yaml_document_get_node(&document, i);
+		if (!node)
+			break;
+
+		DMSG("Node [%d]: %d\n", i++, node->type);
+		if (node->type == YAML_SCALAR_NODE) {
+			DMSG("Scalar [%d]: %s\n", node->data.scalar.style,
+			      node->data.scalar.value);
+
+		}
+	} while (true);
+
+	yaml_parser_delete(&parser);
+
 	return res;
 }
 

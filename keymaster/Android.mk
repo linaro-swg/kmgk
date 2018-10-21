@@ -33,6 +33,8 @@ LOCAL_VENDOR_MODULE := true
 LOCAL_CFLAGS = -Wall -Werror
 LOCAL_CFLAGS += -DANDROID_BUILD
 
+LOCAL_CPPFLAGS += -fexceptions
+
 LOCAL_SRC_FILES := \
 	service.cpp \
 	optee_keymaster.cpp \
@@ -49,7 +51,9 @@ LOCAL_SHARED_LIBRARIES := \
 	libhardware \
 	libutils \
 	libcutils \
-	android.hardware.keymaster@3.0
+	android.hardware.keymaster@3.0 \
+	libyamlcpp
+
 
 include $(BUILD_EXECUTABLE)
 

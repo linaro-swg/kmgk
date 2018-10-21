@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#include <utils/Log.h>
-#include <cutils/properties.h>
 #include <cstring>
+#include <cutils/properties.h>
+#include <iostream>
 #include <memory>
 #include <new>
+#include <utils/Log.h>
 
 #include "optee_keymaster.h"
 #include "optee_keymaster_ipc.h"
@@ -230,7 +231,6 @@ OpteeKeymasterDevice::~OpteeKeymasterDevice() {
 }
 
 Return<void>  OpteeKeymasterDevice::getHardwareFeatures(getHardwareFeatures_cb _hidl_cb) {
-    //send results off to the client
     ALOGD("%s %d", __func__, __LINE__);
     _hidl_cb(is_secure_, supports_ec_, supports_symmetric_cryptography_,
              supports_attestation_, supports_all_digests_,
@@ -240,10 +240,10 @@ Return<void>  OpteeKeymasterDevice::getHardwareFeatures(getHardwareFeatures_cb _
 
 Return<ErrorCode> OpteeKeymasterDevice::addRngEntropy(const hidl_vec<uint8_t> &data) {
     ErrorCode rc = ErrorCode::OK;
-    int in_size = data.size() + sizeof(size_t);
-    uint8_t in[in_size];
-    /*Restrictions for max input data length 2KB*/
+    YAML::Emitter emitter;
+
     const uint32_t maxInputData = 1024 * 2;
+
     ALOGD("%s %d", __func__, __LINE__);
     if (!checkConnection(rc))
         goto error;
@@ -253,11 +253,16 @@ Return<ErrorCode> OpteeKeymasterDevice::addRngEntropy(const hidl_vec<uint8_t> &d
         rc = ErrorCode::INVALID_INPUT_LENGTH;
         goto error;
     }
-    memset(in, 0, in_size);
-    serializeData(in, data.size(), &data[0], sizeof(uint8_t));
+
+    emitter << YAML::BeginMap;
+    emitter << YAML::Key << "operation" << YAML::Value << "addRngEntropy";
+    emitter << YAML::Key << "entropy" << YAML::Value << YAML::Binary(&data[0], data.size());
+
+    ALOGD("%s %d emitted YAML = %s", __func__, __LINE__, emitter.c_str());
 
     rc = legacy_enum_conversion(
-        optee_keystore_call(KM_ADD_RNG_ENTROPY, in, in_size, nullptr, 0));
+        optee_keystore_call(KM_ADD_RNG_ENTROPY, (void *) emitter.c_str(),
+		            (uint32_t) strlen(emitter.c_str()), nullptr, 0));
 
     if (rc != ErrorCode::OK)
         ALOGE("Add RNG entropy failed with code %d [%x]", rc, rc);
@@ -1161,7 +1166,7 @@ int OpteeKeymasterDevice::serializeParamSetWithPresence(uint8_t *dest,
     return dest - start;
 }
 
-int OpteeKeymasterDevice::serializeBlobWithPresenceInfo(uint8_t *dest, 
+int OpteeKeymasterDevice::serializeBlobWithPresenceInfo(uint8_t *dest,
                     const keymaster_blob_t &blob, bool presence) {
     uint8_t *start = dest;
     ALOGD("%s %d", __func__, __LINE__);
@@ -1172,7 +1177,7 @@ int OpteeKeymasterDevice::serializeBlobWithPresenceInfo(uint8_t *dest,
     } else {
         dest += serializePresence(dest, KM_NULL);
     }
-    return dest - start;                  
+    return dest - start;
 }
 
 int OpteeKeymasterDevice::serializeKeyFormat(uint8_t *dest,
