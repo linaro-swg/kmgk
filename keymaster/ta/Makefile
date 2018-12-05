@@ -1,4 +1,4 @@
-CFG_TEE_TA_LOG_LEVEL ?= 3
+CFG_TEE_TA_LOG_LEVEL ?= 4
 CPPFLAGS += -DCFG_TEE_TA_LOG_LEVEL=$(CFG_TEE_TA_LOG_LEVEL)
 
 # The UUID for the Trusted Application

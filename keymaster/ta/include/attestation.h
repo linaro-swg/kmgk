@@ -89,4 +89,6 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 TEE_Result TA_generate_UniqueID(uint64_t T, uint8_t *appID,uint32_t appIDlen,
 		uint8_t R, uint8_t *uniqueID, uint32_t *uniqueIDlen);
 
+TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle root_rsa_key,
+				      keymaster_blob_t *root_cert);
 #endif /* ATTESTATION_H_ */
