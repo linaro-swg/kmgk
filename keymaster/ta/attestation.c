@@ -328,6 +328,7 @@ TEE_Result TA_create_ec_attest_key(void)
 					goto error_3;
 				}
 
+				DHEXDUMP(buffer, buffSize);
 				//Store EC key in format: size | buffer attribute
 				res = TA_write_attest_obj_attr(ECobject, buffer, buffSize);
 				if (res != TEE_SUCCESS) {

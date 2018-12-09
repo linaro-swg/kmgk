@@ -91,4 +91,7 @@ TEE_Result TA_generate_UniqueID(uint64_t T, uint8_t *appID,uint32_t appIDlen,
 
 TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle root_rsa_key,
 				      keymaster_blob_t *root_cert);
+
+TEE_Result mbedTLS_gen_root_cert_ecc(TEE_ObjectHandle ecc_root_key,
+				     keymaster_blob_t *ecc_root_cert);
 #endif /* ATTESTATION_H_ */
