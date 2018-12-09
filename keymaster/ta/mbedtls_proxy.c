@@ -23,13 +23,17 @@
 #define CERT_ROOT_ORG_UNIT_RSA "Attestation RSA root CA"
 #define CERT_ROOT_ORG_UNIT_ECC "Attestation ECC root CA"
 #define CERT_ROOT_MAX_SIZE 4096
-const char *cert_subject_rsa = "OU=" CERT_ROOT_ORG_UNIT_RSA
+
+#define MBEDTLS_OID_ATTESTATION "\x01\x03\x06\x01\x04\x01\x2B79\x02\x01\x11"
+
+const char *cert_root_subject_rsa = "OU=" CERT_ROOT_ORG_UNIT_RSA
 			       ",O=" CERT_ROOT_ORG
 			       ",CN=" CERT_ROOT_ORG;
 
-const char *cert_subject_ecc = "OU=" CERT_ROOT_ORG_UNIT_ECC
+const char *cert_root_subject_ecc = "OU=" CERT_ROOT_ORG_UNIT_ECC
 			       ",O=" CERT_ROOT_ORG
 			       ",CN=" CERT_ROOT_ORG;
+const char *cert_attest_key_subject = "CN=Android Keystore Key";
 
 const uint32_t cert_version = 2;	/* x509 version of cert. v3 used. */
 const uint32_t cert_version_tag;	/* tag value for version field. */
@@ -47,6 +51,7 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 					const TEE_ObjectHandle key_obj)
 {
 	TEE_Result res = TEE_SUCCESS;
+	TEE_ObjectInfo obj_info;
 	uint32_t read_size = 0;
 	uint8_t key_attr_buf[EC_KEY_BUFFER_SIZE];
 	uint32_t key_attr_buf_size = EC_KEY_BUFFER_SIZE;
@@ -65,6 +70,7 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 	mbedtls_ctr_drbg_init(&ctr_drbg);
 	mbedtls_entropy_init(&entropy);
 
+	TEE_GetObjectInfo1(key_obj, &obj_info);
 	mbedtls_ret = mbedtls_ctr_drbg_seed(&ctr_drbg, f_rng,
 					    &entropy, NULL, 0);
 	if (mbedtls_ret != 0) {
@@ -93,64 +99,70 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 
 	mbedtls_ecdsa_init(ecc);
 
-	/* Read root RSA key attributes */
-	res = TEE_SeekObjectData(key_obj, 0, TEE_DATA_SEEK_SET);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to seek root ECC key, res=%x", res);
-		res = TEE_ERROR_BAD_STATE;
-		goto out;
-	}
-
-	/* Read Curve ID TEE_ATTR_ECC_CURVE */
-	res = TEE_ReadObjectData(key_obj, &grp_id, sizeof(uint32_t), &read_size);
-	if (res != TEE_SUCCESS || read_size != sizeof(uint32_t)) {
-		EMSG("Failed to read EC Curve id, res=%x", res);
-		return res;
-	}
-
-	/*
-	 * Reading following attributes:
-	 * TEE_ATTR_ECC_PRIVATE_VALUE
-	 * TEE_ATTR_ECC_PUBLIC_VALUE_X
-	 * TEE_ATTR_ECC_PUBLIC_VALUE_Y
-	 */
-
-	for (uint32_t i = 0; i < (KM_ATTR_COUNT_EC - 1); i++) {
-		res = TEE_ReadObjectData(key_obj, &key_attr_buf_size,
-				sizeof(uint32_t), &read_size);
-		if (res) {
-			EMSG("Failed to read EC attribute size, res=%x", res);
-			return res;
-		}
-		if (key_attr_buf_size > EC_KEY_BUFFER_SIZE) {
-			EMSG("Invalid EC attribute size %d", key_attr_buf_size);
+	/* check if we work with persistent object, as transient API differs */
+	if (obj_info.handleFlags & TEE_HANDLE_FLAG_PERSISTENT) {
+		/* Read root RSA key attributes */
+		res = TEE_SeekObjectData(key_obj, 0, TEE_DATA_SEEK_SET);
+		if (res != TEE_SUCCESS) {
+			EMSG("Failed to seek root ECC key, res=%x", res);
 			res = TEE_ERROR_BAD_STATE;
-			return res;
-		}
-		res = TEE_ReadObjectData(key_obj, key_attr_buf,
-					 key_attr_buf_size, &read_size);
-		if (res != TEE_SUCCESS || read_size != key_attr_buf_size) {
-			EMSG("Failed to read EC attribute buffer, res=%x", res);
-			return res;
-		}
-
-		/* provide sane value */
-		mbedtls_mpi_init(&attrs[i]);
-
-		/* convert to mbedtls mpi structure from binary data */
-		if ((mbedtls_ret = mbedtls_mpi_read_binary(&attrs[i],
-							  key_attr_buf,
-							  key_attr_buf_size)) != 0) {
-			EMSG("mbedtls_mpi_read_binary returned %d\n\n",
-			     mbedtls_ret);
-			res = TEE_ERROR_BAD_FORMAT;
-
 			goto out;
 		}
-		DHEXDUMP(key_attr_buf, key_attr_buf_size);
 
+		/* Read Curve ID TEE_ATTR_ECC_CURVE */
+		res = TEE_ReadObjectData(key_obj, &grp_id,
+					 sizeof(uint32_t), &read_size);
+		if (res != TEE_SUCCESS || read_size != sizeof(uint32_t)) {
+			EMSG("Failed to read EC Curve id, res=%x", res);
+			return res;
+		}
+
+		/*
+		 * Reading following attributes:
+		 * TEE_ATTR_ECC_PRIVATE_VALUE
+		 * TEE_ATTR_ECC_PUBLIC_VALUE_X
+		 * TEE_ATTR_ECC_PUBLIC_VALUE_Y
+		 */
+
+		for (uint32_t i = 0; i < (KM_ATTR_COUNT_EC - 1); i++) {
+			res = TEE_ReadObjectData(key_obj, &key_attr_buf_size,
+					sizeof(uint32_t), &read_size);
+			if (res) {
+				EMSG("Failed to read EC attribute size, res=%x", res);
+				return res;
+			}
+			if (key_attr_buf_size > EC_KEY_BUFFER_SIZE) {
+				EMSG("Invalid EC attribute size %d",
+				     key_attr_buf_size);
+				res = TEE_ERROR_BAD_STATE;
+				return res;
+			}
+			res = TEE_ReadObjectData(key_obj, key_attr_buf,
+						 key_attr_buf_size, &read_size);
+			if (res != TEE_SUCCESS || read_size != key_attr_buf_size) {
+				EMSG("Failed to read EC attribute buffer, res=%x", res);
+				return res;
+			}
+
+			/* provide sane value */
+			mbedtls_mpi_init(&attrs[i]);
+
+			/* convert to mbedtls mpi structure from binary data */
+			if ((mbedtls_ret = mbedtls_mpi_read_binary(&attrs[i],
+								  key_attr_buf,
+								  key_attr_buf_size)) != 0) {
+				EMSG("mbedtls_mpi_read_binary returned %d\n\n",
+				     mbedtls_ret);
+				res = TEE_ERROR_BAD_FORMAT;
+
+				goto out;
+			}
+			DHEXDUMP(key_attr_buf, key_attr_buf_size);
+
+		}
+	} else {
+		TEE_Panic(1);
 	}
-
 
 	/*
 	 * Filling mbedtls_ecp_group field, mbedTLS IDs correspond
@@ -487,7 +499,7 @@ TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle rsa_root_key,
 		return res;
 	}
 
-	mbedTLS_gen_root_cert(&issuer_key, rsa_root_cert, cert_subject_rsa);
+	mbedTLS_gen_root_cert(&issuer_key, rsa_root_cert, cert_root_subject_rsa);
 	if (res) {
 		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
 		goto out;
@@ -512,13 +524,186 @@ TEE_Result mbedTLS_gen_root_cert_ecc(TEE_ObjectHandle ecc_root_key,
 		return res;
 	}
 
-	mbedTLS_gen_root_cert(&issuer_key, ecc_root_cert, cert_subject_ecc);
+	mbedTLS_gen_root_cert(&issuer_key, ecc_root_cert, cert_root_subject_ecc);
 	if (res) {
 		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
 		goto out;
 	}
 out:
 	mbedtls_pk_free(&issuer_key);
+
+	return res;
+}
+
+
+static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
+					  mbedtls_pk_context *subject_key,
+					  keymaster_blob_t *attest_cert,
+					  const char *cert_subject)
+{
+	unsigned char buf[CERT_ROOT_MAX_SIZE];
+	int blen = CERT_ROOT_MAX_SIZE;
+	int ret;
+	TEE_Result res = TEE_SUCCESS;
+
+	mbedtls_mpi serial;
+	mbedtls_x509write_cert crt;
+	const char *attestation_oid = MBEDTLS_OID_ATTESTATION;
+	unsigned char attest_value[140];
+
+	memset(attest_value, 140, 0);
+	DMSG("%s %d", __func__, __LINE__);
+	mbedtls_mpi_init(&serial);
+	mbedtls_x509write_crt_init(&crt);
+
+	ret = mbedtls_mpi_lset(&serial, 1);
+	if (ret) {
+		EMSG("mbedtls_mpi_read_string: failed: -%#x", -ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_subject_name(&crt,
+						     cert_attest_key_subject);
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_subject_name: failed: -%#x",
+				-ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_issuer_name(&crt, cert_subject);
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_issuer_name: failed: -%#x",
+				-ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	mbedtls_x509write_crt_set_version( &crt, MBEDTLS_X509_CRT_VERSION_3 );
+	mbedtls_x509write_crt_set_md_alg(&crt,  MBEDTLS_MD_SHA256);
+	mbedtls_x509write_crt_set_subject_key(&crt, subject_key);
+	mbedtls_x509write_crt_set_issuer_key(&crt, issuer_key);
+
+	ret = mbedtls_x509write_crt_set_serial(&crt, &serial);
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_serial: failed: -%#x", -ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_validity(&crt, "19700101000000",
+						 "20301231235959");
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_validity: failed: -%#x", -ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_basic_constraints(&crt, 1, -1);
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_validity: failed: -%#x", -ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_subject_key_identifier(&crt);
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_subject_key_identifier: failed: -%#x",
+				-ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_authority_key_identifier(&crt);
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_authority_key_identifier: failed: -%#x",
+				-ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_key_usage(&crt,
+					    MBEDTLS_X509_KU_DIGITAL_SIGNATURE |
+					    MBEDTLS_X509_KU_KEY_CERT_SIGN);
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_key_usage: failed: -%#x",
+				-ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	/* add attestation OID */
+	ret =  mbedtls_x509write_crt_set_extension(&crt, attestation_oid,
+						   MBEDTLS_OID_SIZE(attestation_oid),
+			                           1, attest_value,
+						   sizeof(attest_value));
+	if (ret) {
+		EMSG("mbedtls_x509write_crt_set_key_usage: failed: -%#x",
+				-ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+	/*
+	 * from https://tls.mbed.org/api/x509__crt_8h.html:
+	 * Write a built up certificate to a X509 DER structure Note: data is
+	 * written at the end of the buffer! Use the return value to determine
+	 * where you should start using the buffer.
+	 */
+	ret = mbedtls_x509write_crt_der(&crt, buf, blen, f_rng, NULL);
+	if (ret < 0) {
+		EMSG("mbedtls_x509write_crt_der: failed: -%#x",
+				-ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	DMSG("Generated attest key certificate: \n");
+	DHEXDUMP(buf + blen - ret, ret);
+
+	/*attest_cert->data_length = ret;
+	attest_cert->data = TEE_Malloc(attest_cert->data_length,
+				     TEE_MALLOC_FILL_ZERO);
+	TEE_MemMove(attest_cert->data, buf + blen - ret,
+			ret); */
+
+out:
+	mbedtls_mpi_free(&serial);
+	mbedtls_x509write_crt_free(&crt);
+
+	return res;
+}
+
+TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
+					   TEE_ObjectHandle rsa_attest_key,
+					   keymaster_blob_t *rsa_attest_cert)
+{
+	TEE_Result res = TEE_SUCCESS;
+	mbedtls_pk_context issuer_key;
+	mbedtls_pk_context subject_key;
+
+	DMSG("%s %d", __func__, __LINE__);
+	res = mbedTLS_import_rsa_pk(&issuer_key, rsa_root_key);
+	if (res) {
+		EMSG("mbedTLS_import_rsa_pk: failed: %#x", res);
+		return res;
+	}
+
+	res = mbedTLS_import_rsa_pk(&subject_key, rsa_attest_key);
+	if (res) {
+		EMSG("mbedTLS_import_rsa_pk: failed: %#x", res);
+		return res;
+	}
+
+	mbedTLS_attest_key_cert(&issuer_key, &subject_key,
+				rsa_attest_cert, cert_root_subject_rsa);
+	if (res) {
+		EMSG("mbedTLS_attest_key_cert: failed: %#x", res);
+		goto out;
+	}
+out:
+	mbedtls_pk_free(&issuer_key);
+	mbedtls_pk_free(&subject_key);
 
 	return res;
 }
