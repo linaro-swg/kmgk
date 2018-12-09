@@ -42,6 +42,166 @@ static int f_rng(void *rng __unused, unsigned char *output, size_t output_len)
 	return 0;
 }
 
+/* create mbedtls_pk_context based on ECC key attributes */
+static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
+					const TEE_ObjectHandle key_obj)
+{
+	TEE_Result res = TEE_SUCCESS;
+	uint32_t read_size = 0;
+	uint8_t key_attr_buf[EC_KEY_BUFFER_SIZE];
+	uint32_t key_attr_buf_size = EC_KEY_BUFFER_SIZE;
+
+	mbedtls_ecdsa_context      *ecc;
+	mbedtls_mpi              attrs[KM_ATTR_COUNT_EC - 1];
+	mbedtls_entropy_context  entropy;
+	mbedtls_ctr_drbg_context ctr_drbg;
+	mbedtls_ecp_group_id grp_id;
+	const mbedtls_pk_info_t *pk_info;
+	int                      mbedtls_ret = 1;
+
+	DMSG("%s %d", __func__, __LINE__);
+
+	mbedtls_pk_init(pk);
+	mbedtls_ctr_drbg_init(&ctr_drbg);
+	mbedtls_entropy_init(&entropy);
+
+	mbedtls_ret = mbedtls_ctr_drbg_seed(&ctr_drbg, f_rng,
+					    &entropy, NULL, 0);
+	if (mbedtls_ret != 0) {
+		EMSG("mbedtls_ctr_drbg_seed returned %d\n",
+		     mbedtls_ret);
+		res = TEE_ERROR_GENERIC;
+		goto out;
+	}
+
+	pk_info = mbedtls_pk_info_from_type(MBEDTLS_PK_ECKEY);
+	if ((mbedtls_ret = mbedtls_pk_setup(pk, pk_info)) != 0) {
+		EMSG("mbedtls_pk_setup returned %d\n",
+		     mbedtls_ret);
+		res = TEE_ERROR_GENERIC;
+		mbedtls_pk_free(pk);
+		goto out;
+	}
+
+	ecc = (mbedtls_ecdsa_context *)TEE_Malloc(sizeof(mbedtls_ecdsa_context),
+						  TEE_MALLOC_FILL_ZERO);
+
+	mbedtls_ecdsa_init(ecc);
+
+	/* Read root RSA key attributes */
+	res = TEE_SeekObjectData(key_obj, 0, TEE_DATA_SEEK_SET);
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to seek root ECC key, res=%x", res);
+		res = TEE_ERROR_BAD_STATE;
+		goto out;
+	}
+
+	/* Read Curve ID TEE_ATTR_ECC_CURVE */
+	res = TEE_ReadObjectData(key_obj, &grp_id, sizeof(uint32_t), &read_size);
+	if (res != TEE_SUCCESS || read_size != sizeof(uint32_t)) {
+		EMSG("Failed to read EC Curve id, res=%x", res);
+		return res;
+	}
+
+	/*
+	 * Reading following attributes:
+	 * TEE_ATTR_ECC_PRIVATE_VALUE
+	 * TEE_ATTR_ECC_PUBLIC_VALUE_X
+	 * TEE_ATTR_ECC_PUBLIC_VALUE_Y
+	 */
+
+	for (uint32_t i = 0; i < (KM_ATTR_COUNT_EC - 1); i++) {
+		res = TEE_ReadObjectData(key_obj, &key_attr_buf_size,
+				sizeof(uint32_t), &read_size);
+		if (res) {
+			EMSG("Failed to read EC attribute size, res=%x", res);
+			return res;
+		}
+		if (key_attr_buf_size > EC_KEY_BUFFER_SIZE) {
+			EMSG("Invalid EC attribute size %d", key_attr_buf_size);
+			res = TEE_ERROR_BAD_STATE;
+			return res;
+		}
+		res = TEE_ReadObjectData(key_obj, key_attr_buf,
+					 key_attr_buf_size, &read_size);
+		if (res != TEE_SUCCESS || read_size != key_attr_buf_size) {
+			EMSG("Failed to read EC attribute buffer, res=%x", res);
+			return res;
+		}
+
+		/* provide sane value */
+		mbedtls_mpi_init(&attrs[i]);
+
+		/* convert to mbedtls mpi structure from binary data */
+		if ((mbedtls_ret = mbedtls_mpi_read_binary(&attrs[i],
+							  key_attr_buf,
+							  key_attr_buf_size)) != 0) {
+			EMSG("mbedtls_mpi_read_binary returned %d\n\n",
+			     mbedtls_ret);
+			res = TEE_ERROR_BAD_FORMAT;
+
+			goto out;
+		}
+		DHEXDUMP(key_attr_buf, key_attr_buf_size);
+
+	}
+
+
+	/*
+	 * Filling mbedtls_ecp_group field, mbedTLS IDs correspond
+	 * to the same defined optee-os core:
+	 *
+	 *
+	 * #define TEE_ECC_CURVE_NIST_P192             0x00000001
+	 * #define TEE_ECC_CURVE_NIST_P224             0x00000002
+	 * #define TEE_ECC_CURVE_NIST_P256             0x00000003
+	 * #define TEE_ECC_CURVE_NIST_P384             0x00000004
+	 * #define TEE_ECC_CURVE_NIST_P521             0x00000005
+	 *
+	 * enum mbedtls_ecp_group_id {
+	 *   MBEDTLS_ECP_DP_NONE = 0,
+	 *   MBEDTLS_ECP_DP_SECP192R1,
+	 *   MBEDTLS_ECP_DP_SECP224R1,
+	 *   MBEDTLS_ECP_DP_SECP256R1,
+	 *   MBEDTLS_ECP_DP_SECP384R1,
+	 *   MBEDTLS_ECP_DP_SECP521R1,
+	 *              ...
+	 * }
+	 *
+	 */
+	mbedtls_ret = mbedtls_ecp_group_load( &ecc->grp, grp_id);
+	if (mbedtls_ret) {
+		EMSG("mbedtls_ecp_group_load: failed: -%#x",
+				-mbedtls_ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	if ((mbedtls_ret = mbedtls_mpi_copy(&ecc->Q.X, &attrs[0]) != 0) ||
+	    (mbedtls_ret = mbedtls_mpi_copy(&ecc->Q.Y, &attrs[1]) != 0) ||
+	    (mbedtls_ret = mbedtls_mpi_copy(&ecc->d, &attrs[2]) != 0) ||
+	    (mbedtls_ret = mbedtls_mpi_lset(&ecc->Q.Z, 1 ) != 0)) {
+		EMSG("mbedtls_ecc import failed returned %d\n\n", mbedtls_ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	pk->pk_ctx = ecc;
+
+out:
+	mbedtls_ctr_drbg_free(&ctr_drbg);
+	mbedtls_entropy_free(&entropy);
+
+	for (uint32_t i = 0; i < KM_ATTR_COUNT_EC - 1; i++)
+		mbedtls_mpi_free(&attrs[i]);
+
+	if (res != TEE_SUCCESS) {
+		mbedtls_ecp_keypair_free(ecc);
+		TEE_Free(ecc);
+	}
+
+	return res;
+}
 /* create mbedtls_pk_context based on RSA key attributes */
 static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 					const TEE_ObjectHandle key_obj)
@@ -112,7 +272,7 @@ static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 	for (uint32_t i = 0; i < KM_ATTR_COUNT_RSA; i++) {
 		res = TEE_ReadObjectData(key_obj, &key_attr_buf_size,
 					 sizeof(uint32_t), &read_size);
-		if (res != TEE_SUCCESS || read_size != sizeof(uint32_t)) {
+		if (res) {
 			EMSG("Failed to read RSA attribute size, res=%x", res);
 			res = TEE_ERROR_BAD_STATE;
 			goto out;
@@ -178,8 +338,11 @@ out:
 	for (uint32_t i = 0; i < KM_ATTR_COUNT_RSA; i++)
 		mbedtls_mpi_free(&attrs[i]);
 
-	if (res != TEE_SUCCESS)
+	if (res != TEE_SUCCESS) {
+		mbedtls_rsa_free(rsa);
 		TEE_Free(rsa);
+	}
+
 	return res;
 }
 
@@ -334,4 +497,23 @@ out:
 TEE_Result mbedTLS_gen_root_cert_ecc(TEE_ObjectHandle ecc_root_key,
 				     keymaster_blob_t *ecc_root_cert)
 {
+	TEE_Result res = TEE_SUCCESS;
+	mbedtls_pk_context issuer_key;
+
+	DMSG("%s %d", __func__, __LINE__);
+	res = mbedTLS_import_ecc_pk(&issuer_key, ecc_root_key);
+	if (res) {
+		EMSG("mbedTLS_import_ecc_pk: failed: %#x", res);
+		return res;
+	}
+
+	mbedTLS_gen_root_cert(&issuer_key, ecc_root_cert, cert_subject_ecc);
+	if (res) {
+		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
+		goto out;
+	}
+out:
+	mbedtls_pk_free(&issuer_key);
+
+	return res;
 }
