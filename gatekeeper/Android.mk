@@ -55,9 +55,4 @@ LOCAL_SHARED_LIBRARIES := \
 
 include $(BUILD_EXECUTABLE)
 
-################################################################################
-# Build gatekeeper HAL TA                                                      #
-################################################################################
-include $(LOCAL_PATH)/ta/Android.mk
-
 #endif # Include only for HiKey ones.
