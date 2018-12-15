@@ -420,10 +420,18 @@ TEE_Result TA_gen_attest_rsa_cert(const TEE_TASessionHandle sessionSTA,
 		goto error_1;
 	}
 
+	mbedTLS_gen_attest_key_cert_rsa(rootAttKey,
+					attestedKey,
+					&cert_chain->entries[KEY_ATT_CERT_INDEX]);
+
+	DMSG("Origin certificate: \n");
 	//Copy ASN.1 DER certificate
 	TEE_MemMove(cert_chain->entries[KEY_ATT_CERT_INDEX].data,
 			params[3].memref.buffer,
 			cert_chain->entries[KEY_ATT_CERT_INDEX].data_length);
+
+	DHEXDUMP(cert_chain->entries[KEY_ATT_CERT_INDEX].data,
+		 cert_chain->entries[KEY_ATT_CERT_INDEX].data_length);
 
 error_1:
 	if (attest_key_attr) {
