@@ -492,8 +492,8 @@ void TA_add_creation_datetime(keymaster_key_param_set_t *params_t, bool replace)
 			datetime_added = true;
 			if (replace) {
 				params_t->params[i].key_param.date_time =
-					(uint64_t)(time.seconds * 1000 +
-						   time.millis);
+					(uint64_t)(time.seconds) * 1000 +
+						   time.millis;
 			}
 			break;
 		}
@@ -503,8 +503,8 @@ void TA_add_creation_datetime(keymaster_key_param_set_t *params_t, bool replace)
 		(params_t->params + params_t->length)->tag = KM_TAG_CREATION_DATETIME;
 		(params_t->params + params_t->length)->
 						key_param.date_time
-						= (uint64_t)(time.seconds * 1000
-								+ time.millis);
+						= (uint64_t)(time.seconds) * 1000
+								+ time.millis;
 		params_t->length++;
 	}
 }
