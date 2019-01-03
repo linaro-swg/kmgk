@@ -1,5 +1,4 @@
 service hal_gatekeeper_optee /vendor/bin/hw/android.hardware.gatekeeper@1.0-service.optee
     class hal
-    user root
-    group root
-    seclabel u:r:su:s0
+    user system
+    group system shell
