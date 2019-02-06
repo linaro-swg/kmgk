@@ -18,6 +18,7 @@
 #include "attestation.h"
 #include "generator.h"
 #include "asn1.h"
+#include "crypto_aes.h"
 
 //Attestation root keys - RSA and EC
 static uint8_t RsaAttKeyID[] = {0xb7U, 0x6aU, 0xb0U, 0xdcU};
@@ -162,7 +163,231 @@ TEE_Result TA_open_root_ec_attest_cert(TEE_ObjectHandle *attCert)
 	return res;
 }
 
-TEE_Result TA_create_rsa_attest_key(void)
+#ifdef CFG_ATTESTATION_PROVISIONING
+static TEE_Result TA_set_rsa_attest_key(TEE_TASessionHandle sessionSTA, keymaster_blob_t key_data)
+{
+	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
+	TEE_ObjectHandle RSAobject = TEE_HANDLE_NULL;
+	TEE_Attribute	 	*attrs;
+	uint32_t			attrs_count;
+	uint64_t key_rsa_public_exponent = UNDEFINED;
+	uint32_t key_size = UNDEFINED;
+
+	DMSG("RSA root attestation key ...");
+
+	if (TA_decode_pkcs8(sessionSTA, key_data, &attrs,
+			&attrs_count, KM_ALGORITHM_RSA, &key_size,
+			&key_rsa_public_exponent) != KM_ERROR_OK)
+	{
+		goto error_1;
+	}
+
+	if (key_size % 8 != 0 || key_size > MAX_KEY_RSA) {
+		EMSG("RSA key size %d must be multiple of 8 and less than %u",
+							key_size,MAX_KEY_RSA);
+		goto error_2;
+	}
+
+	//Create object in storage
+	/* TODO : store in RPMB */
+	result = TEE_CreatePersistentObject(TEE_STORAGE_PRIVATE,
+			RsaAttKeyID, sizeof(RsaAttKeyID),
+			TEE_DATA_FLAG_ACCESS_WRITE,
+			TEE_HANDLE_NULL, NULL, 0U, &RSAobject);
+	if (result != TEE_SUCCESS) {
+		EMSG("Failed to create a RSA persistent key, res=%x", result);
+		goto error_2;
+	}
+
+	for (uint32_t i = 0; i < attrs_count; i++) {
+		//Store RSA key in format: size | buffer attribute
+		DMSG("%s %d attrs[i].attributeID 0x%08X", __func__, __LINE__,attrs[i].attributeID);
+		result = TA_write_attest_obj_attr(RSAobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
+		if (result != TEE_SUCCESS) {
+			EMSG("Failed to write RSA attribute %x, res=%x",
+					attrs[i].attributeID, result);
+			goto error_3;
+		}
+	}
+error_3:
+	(result == TEE_SUCCESS) ?
+			TEE_CloseObject(RSAobject) :
+			TEE_CloseAndDeletePersistentObject(RSAobject);
+error_2:
+	free_attrs(attrs, attrs_count);
+
+error_1:
+	return result;
+}
+
+static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster_blob_t key_data)
+{
+	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
+	TEE_ObjectHandle ECobject = TEE_HANDLE_NULL;
+	TEE_Attribute *attrs;
+	uint32_t attrs_count;
+	uint64_t key_rsa_public_exponent = UNDEFINED;
+	uint32_t key_size = UNDEFINED;
+	uint32_t curve = UNDEFINED;
+
+	DMSG("EC root attestation key creation...");
+
+	if (TA_decode_pkcs8(sessionSTA, key_data, &attrs,
+			&attrs_count, KM_ALGORITHM_EC, &key_size,
+			&key_rsa_public_exponent) != KM_ERROR_OK)
+	{
+		goto error_1;
+	}
+
+	curve = TA_get_curve_nist(key_size);
+	if (curve == UNDEFINED) {
+		EMSG("Failed to get ECC curve nist");
+		result = TEE_ERROR_BAD_PARAMETERS;
+		goto error_2;
+	}
+
+	/* TODO : store in RPMB */
+	//Create object in storage
+	result = TEE_CreatePersistentObject(TEE_STORAGE_PRIVATE,
+			EcAttKeyID, sizeof(EcAttKeyID),
+			TEE_DATA_FLAG_ACCESS_WRITE,
+			TEE_HANDLE_NULL, NULL, 0U, &ECobject);
+	if (result != TEE_SUCCESS) {
+		EMSG("Failed to create a EC persistent key, res=%x", result);
+		goto error_2;
+	}
+
+	DMSG("%s %d curve 0x%08X", __func__, __LINE__,curve);
+	result = TEE_WriteObjectData(ECobject,
+			(void *)&curve, sizeof(uint32_t));
+	if (result != TEE_SUCCESS)
+	{
+		EMSG("Failed to write Curve value res=%x",
+				result);
+		goto error_3;
+	}
+
+	for (uint32_t i = 0; i < attrs_count; i++) {
+		//Attributes are "Ref"
+		DMSG("%s %d attrs[i].attributeID 0x%08X", __func__, __LINE__,attrs[i].attributeID);
+		result = TA_write_attest_obj_attr(ECobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
+		if (result != TEE_SUCCESS) {
+			EMSG("Failed to write EC attribute %x, res=%x",
+					attrs[i].attributeID, result);
+			goto error_3;
+		}
+	}
+error_3:
+	(result == TEE_SUCCESS) ?
+			TEE_CloseObject(ECobject) :
+			TEE_CloseAndDeletePersistentObject(ECobject);
+
+error_2:
+	free_attrs(attrs, attrs_count);
+
+error_1:
+	return result;
+}
+
+static TEE_Result TA_append_root_rsa_attest_cert(keymaster_blob_t cert)
+{
+	TEE_Result res = TEE_SUCCESS;
+	TEE_ObjectHandle CertObject = TEE_HANDLE_NULL;
+
+	DMSG("Root RSA attestation certificate update...");
+
+	res = TA_open_root_rsa_attest_cert(&CertObject);
+	if (res == TEE_ERROR_ITEM_NOT_FOUND) {
+		//Create object in storage
+		res = TEE_CreatePersistentObject(TEE_STORAGE_PRIVATE,
+				RSARootAttCertID, sizeof(RSARootAttCertID),
+				TEE_DATA_FLAG_ACCESS_WRITE,
+				TEE_HANDLE_NULL, NULL, 0U, &CertObject);
+	} else if (res == TEE_SUCCESS) {
+		//Open object in storage
+		TEE_CloseObject(CertObject);
+		res = TEE_OpenPersistentObject(TEE_STORAGE_PRIVATE,
+				RSARootAttCertID, sizeof(RSARootAttCertID),
+				TEE_DATA_FLAG_ACCESS_WRITE,
+				&CertObject);
+	}
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to create a persistent RSA certificate object, res=%x",
+				res);
+		goto error_1;
+	}
+	res = TEE_SeekObjectData(CertObject,0,TEE_DATA_SEEK_END);
+	if (res != TEE_SUCCESS) {
+		goto error_2;
+	}
+
+	//Store cert in format: size | ASN.1 DER buffer
+	res = TA_write_attest_cert(CertObject,
+			cert.data, cert.data_length);
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to write RSA certificate, res=%x", res);
+	}
+
+error_2:
+	(res == TEE_SUCCESS) ?
+			TEE_CloseObject(CertObject) :
+			TEE_CloseAndDeletePersistentObject(CertObject);
+
+error_1:
+	return res;
+}
+
+static TEE_Result TA_append_root_ec_attest_cert(keymaster_blob_t cert)
+{
+	TEE_Result res = TEE_SUCCESS;
+	TEE_ObjectHandle CertObject = TEE_HANDLE_NULL;
+
+	DMSG("Root EC attestation certificate creation...");
+
+	res = TA_open_root_ec_attest_cert(&CertObject);
+	if (res == TEE_ERROR_ITEM_NOT_FOUND) {
+		//Create object in storage
+		res = TEE_CreatePersistentObject(TEE_STORAGE_PRIVATE,
+				ECRootAttCertID, sizeof(ECRootAttCertID),
+				TEE_DATA_FLAG_ACCESS_WRITE,
+				TEE_HANDLE_NULL, NULL, 0U, &CertObject);
+	} else if (res == TEE_SUCCESS) {
+		//Open object in storage
+		TEE_CloseObject(CertObject);
+		res = TEE_OpenPersistentObject(TEE_STORAGE_PRIVATE,
+				ECRootAttCertID, sizeof(ECRootAttCertID),
+				TEE_DATA_FLAG_ACCESS_WRITE,
+				&CertObject);
+	}
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to create a persistent EC certificate object, res=%x",
+				res);
+		goto error_1;
+	}
+	res = TEE_SeekObjectData(CertObject,0,TEE_DATA_SEEK_END);
+	if (res != TEE_SUCCESS) {
+		goto error_2;
+	}
+
+	//Store cert in format: size | ASN.1 DER buffer
+	res = TA_write_attest_cert(CertObject,
+			cert.data, cert.data_length);
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to write EC certificate, res=%x", res);
+	}
+
+error_2:
+	(res == TEE_SUCCESS) ?
+			TEE_CloseObject(CertObject) :
+			TEE_CloseAndDeletePersistentObject(CertObject);
+
+error_1:
+	return res;
+}
+
+#else // CFG_ATTESTATION_PROVISIONING
+
+static TEE_Result TA_create_rsa_attest_key(void)
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle RSAobject = TEE_HANDLE_NULL;
@@ -249,7 +474,7 @@ error_1:
 	return res;
 }
 
-TEE_Result TA_create_ec_attest_key(void)
+static TEE_Result TA_create_ec_attest_key(void)
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle ECobject = TEE_HANDLE_NULL;
@@ -364,11 +589,11 @@ error_1:
 	return res;
 }
 
-TEE_Result TA_create_root_rsa_attest_cert(TEE_TASessionHandle sessionSTA)
+static TEE_Result TA_create_root_rsa_attest_cert(TEE_TASessionHandle sessionSTA)
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle CertObject = TEE_HANDLE_NULL;
-	keymaster_blob_t root_cert; //root RSA certificate
+	keymaster_blob_t root_cert = {0}; //root RSA certificate
 	TEE_ObjectHandle obj_h = TEE_HANDLE_NULL;
 
 	res = TA_open_root_rsa_attest_cert(&CertObject);
@@ -427,11 +652,11 @@ error_1:
 	return res;
 }
 
-TEE_Result TA_create_root_ec_attest_cert(TEE_TASessionHandle sessionSTA)
+static TEE_Result TA_create_root_ec_attest_cert(TEE_TASessionHandle sessionSTA)
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle CertObject = TEE_HANDLE_NULL;
-	keymaster_blob_t root_cert; //root EC certificate
+	keymaster_blob_t root_cert = {0}; //root EC certificate
 	TEE_ObjectHandle obj_h = TEE_HANDLE_NULL;
 
 	res = TA_open_root_ec_attest_cert(&CertObject);
@@ -489,6 +714,7 @@ error_2:
 error_1:
 	return res;
 }
+#endif
 
 TEE_Result TA_read_root_attest_cert(uint32_t type,
 				keymaster_cert_chain_t *cert_chain)
@@ -546,9 +772,12 @@ TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA, uint32_t type,
 	return res;
 }
 
+#ifndef CFG_ATTESTATION_PROVISIONING
 TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA)
 {
 	TEE_Result res = TEE_SUCCESS;
+
+	DMSG("%s %d", __func__, __LINE__);
 
 	res = TA_create_rsa_attest_key();
 	if (res != TEE_SUCCESS) {
@@ -572,6 +801,7 @@ TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA)
 	}
 	return res;
 }
+#endif
 
 void TA_close_attest_obj(TEE_ObjectHandle attObj)
 {
@@ -710,3 +940,111 @@ exit:
 	return res;
 }
 
+#ifdef CFG_ATTESTATION_PROVISIONING
+keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param params[TEE_NUM_PARAMS])
+{
+	uint8_t *in = NULL;
+	uint8_t *in_end = NULL;
+	size_t  in_size = 0;
+	keymaster_blob_t input = EMPTY_BLOB;	/* IN */
+	keymaster_algorithm_t algorithm;			/* IN */
+	keymaster_error_t res = KM_ERROR_OK;
+	TEE_Result result;
+
+	in = (uint8_t *) params[0].memref.buffer;
+	in_size = (size_t) params[0].memref.size;
+	in_end = in + in_size;
+
+	DMSG("%s %d", __func__, __LINE__);
+	if (in_size == 0)
+		return KM_ERROR_OK;
+	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(algorithm))) {
+		EMSG("Out of input array bounds on deserialization");
+		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
+	TEE_MemMove(&algorithm, in, sizeof(algorithm));
+	in += sizeof(algorithm);
+	TA_deserialize_blob(in, in_end, &input, false, &res, true);
+	if (res != KM_ERROR_OK)
+		goto out;
+
+    switch (algorithm) {
+    case KM_ALGORITHM_RSA:
+		result = TA_set_rsa_attest_key(sessionSTA, input);
+		if (result != TEE_SUCCESS) {
+			EMSG("Something wrong with root RSA key, res=%x", result);
+			/* TODO : convert TEE result in KM result */
+			res = KM_ERROR_UNKNOWN_ERROR;
+			break;
+		}
+        break;
+    case KM_ALGORITHM_EC:
+		result = TA_set_ec_attest_key(sessionSTA, input);
+		if (result != TEE_SUCCESS) {
+			EMSG("Something wrong with root EC key, res=%x", result);
+			/* TODO : convert TEE result in KM result */
+			res = KM_ERROR_UNKNOWN_ERROR;
+			break;
+		}
+        break;
+    default:
+        res = KM_ERROR_UNSUPPORTED_ALGORITHM;
+        break;
+    }
+
+out:
+	return res;
+}
+
+keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS])
+{
+	uint8_t *in = NULL;
+	uint8_t *in_end = NULL;
+	size_t  in_size = 0;
+	keymaster_blob_t input = EMPTY_BLOB;	/* IN */
+	uint32_t algorithm;			/* IN */
+	keymaster_error_t res = KM_ERROR_OK;
+	TEE_Result result;
+
+	in = (uint8_t *) params[0].memref.buffer;
+	in_size = (size_t) params[0].memref.size;
+	in_end = in + in_size;
+
+	DMSG("%s %d", __func__, __LINE__);
+	if (in_size == 0)
+		return KM_ERROR_OK;
+	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(algorithm))) {
+		EMSG("Out of input array bounds on deserialization");
+		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
+	TEE_MemMove(&algorithm, in, sizeof(algorithm));
+	in += sizeof(algorithm);
+	TA_deserialize_blob(in, in_end, &input, false, &res, true);
+	if (res != KM_ERROR_OK)
+		goto out;
+
+    switch (algorithm) {
+    case KM_ALGORITHM_RSA:
+		result = TA_append_root_rsa_attest_cert(input);
+		if (result != TEE_SUCCESS) {
+			EMSG("Something wrong with root RSA certificate, res=%x", result);
+			/* TODO : convert TEE result in KM result */
+			res = KM_ERROR_UNKNOWN_ERROR;
+		}
+        break;
+    case KM_ALGORITHM_EC:
+		result = TA_append_root_ec_attest_cert(input);
+		if (result != TEE_SUCCESS) {
+			EMSG("Something wrong with root EC certificate, res=%x", result);
+			/* TODO : convert TEE result in KM result */
+			res = KM_ERROR_UNKNOWN_ERROR;
+		}
+        break;
+    default:
+        res = KM_ERROR_UNSUPPORTED_ALGORITHM;
+    }
+
+out:
+	return res;
+}
+#endif

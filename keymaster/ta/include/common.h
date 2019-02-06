@@ -47,11 +47,18 @@ enum keystore_command {
 	KM_FINISH				= 13,
 	KM_ABORT				= 14,
 	KM_DESTROY_ATT_IDS			= 15,
+
+/*
+ * Provisioning API
+*/
+    KM_SET_ATTESTATION_KEY				= 0x1000,
+    KM_APPEND_ATTESTATION_CERT_CHAIN	= 0x2000,
 /*
  * Please keep this constant consistent with KM_GET_AUTHTOKEN_KEY define that
  * is defined in Gatekeeper
  */
-	KM_GET_AUTHTOKEN_KEY		= 65536,
+	KM_GET_AUTHTOKEN_KEY		= 0x10000,
+
 };
 
 typedef enum{

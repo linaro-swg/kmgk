@@ -24,6 +24,8 @@
 
 #include "ta_ca_defs.h"
 
+#define EMPTY_BLOB {.data = NULL, .data_length = 0}
+
 //#define ENUM_PERS_OBJS //only for testing
 //#define WIPE_PERS_OBJS //only for testing
 
@@ -61,10 +63,10 @@ TEE_Result TA_open_ec_attest_key(TEE_ObjectHandle *ecKey);
 TEE_Result TA_open_root_rsa_attest_cert(TEE_ObjectHandle *attCert);
 TEE_Result TA_open_root_ec_attest_cert(TEE_ObjectHandle *attCert);
 
-TEE_Result TA_create_rsa_attest_key(void);
-TEE_Result TA_create_ec_attest_key(void);
-TEE_Result TA_create_root_rsa_attest_cert(TEE_TASessionHandle sessionSTA);
-TEE_Result TA_create_root_ec_attest_cert(TEE_TASessionHandle sessionSTA);
+#ifdef CFG_ATTESTATION_PROVISIONING
+keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param params[TEE_NUM_PARAMS]);
+keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS]);
+#endif
 
 TEE_Result TA_read_root_attest_cert(uint32_t type,
 		keymaster_cert_chain_t *cert_chain);
@@ -76,6 +78,7 @@ TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA,
 		uint8_t verified_boot);
 
 TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA);
+
 void TA_close_attest_obj(TEE_ObjectHandle attObj);
 
 TEE_Result TA_write_attest_obj_attr(TEE_ObjectHandle attObj,

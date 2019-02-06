@@ -1,5 +1,11 @@
-CFG_TEE_TA_LOG_LEVEL ?= 3
+CFG_TEE_TA_LOG_LEVEL ?= 1
 CPPFLAGS += -DCFG_TEE_TA_LOG_LEVEL=$(CFG_TEE_TA_LOG_LEVEL)
+
+ifeq ($(CFG_ATTESTATION_PROVISIONING), y)
+CFLAGS += -DCFG_ATTESTATION_PROVISIONING=1
+else
+$(warning Provisioning disabled.)
+endif
 
 # The UUID for the Trusted Application
 BINARY = dba51a17-0563-11e7-93b1-6fa7b0071a51

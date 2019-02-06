@@ -676,6 +676,8 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 #endif
 
 	DMSG("%s %d", __func__, __LINE__);
+
+#ifndef CFG_ATTESTATION_PROVISIONING
 	//This call creates keys/certs only once during first TA run
 	res = TA_create_attest_objs(sessionSTA);
 	if (res != TEE_SUCCESS) {
@@ -683,6 +685,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 		res = KM_ERROR_UNKNOWN_ERROR;
 		goto exit;
 	}
+#endif
 
 	in = (uint8_t *) params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
@@ -1388,7 +1391,15 @@ TEE_Result TA_InvokeCommandEntryPoint(void *sess_ctx __unused,
 	case KM_ABORT:
 		DMSG("KM_ABORT");
 		return TA_abort(params);
-
+#ifdef CFG_ATTESTATION_PROVISIONING
+	//Provisioning commands:
+	case KM_SET_ATTESTATION_KEY:
+		DMSG("KM_SET_ATTESTATION_KEY");
+		return TA_SetAttestationKey(sessionSTA,params);
+	case KM_APPEND_ATTESTATION_CERT_CHAIN:
+		DMSG("KM_APPEND_ATTESTATION_CERT_CHAIN");
+		return TA_AppendAttestationCertKey(params);
+#endif
 	//Gatekeeper commands:
 	case KM_GET_AUTHTOKEN_KEY:
 		DMSG("KM_GET_AUTHTOKEN_KEY");

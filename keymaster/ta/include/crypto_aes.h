@@ -41,4 +41,11 @@ keymaster_error_t TA_aes_update(keymaster_operation_t *operation,
 				const keymaster_key_param_set_t *in_params,
 				bool *is_input_ext);
 
+keymaster_error_t TA_aes_init_operation(uint32_t algorithm, uint32_t mode,
+				uint32_t objecttype, uint32_t objectusage,
+				uint32_t attributeid,
+				void *keybuffer, uint32_t maxkeylen,
+				void *iv, size_t ivlen,
+				TEE_OperationHandle *op);
+
 #endif/*ANDROID_OPTEE_CRYPTO_AES_H*/
