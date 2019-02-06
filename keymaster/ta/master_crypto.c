@@ -223,8 +223,9 @@ TEE_Result TA_decrypt(uint8_t *data, const size_t size)
 
 void TA_free_master_key(void)
 {
-	DMSG("%s %d", __func__, __LINE__);
 	TEE_ObjectHandle secretKey = TEE_HANDLE_NULL;
+
+	DMSG("%s %d", __func__, __LINE__);
 	if (TA_open_secret_key(&secretKey) == TEE_SUCCESS) {
 		TEE_FreeTransientObject(secretKey);
 	}

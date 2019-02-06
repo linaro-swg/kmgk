@@ -75,10 +75,17 @@ enum keystore_command {
 	KM_IMPORT_WRAPPED_KEY = (25 << KEYMASTER_REQ_SHIFT),
 
 /*
+ * Provisioning API
+*/
+	KM_SET_ATTESTATION_KEY = (0x2000 << KEYMASTER_REQ_SHIFT),
+	KM_APPEND_ATTESTATION_CERT_CHAIN = (0x3000 << KEYMASTER_REQ_SHIFT),
+
+/*
  * Please keep this constant consistent with KM_GET_AUTHTOKEN_KEY define that
  * is defined in Gatekeeper
  */
-	KM_GET_AUTHTOKEN_KEY		= 65536,
+	KM_GET_AUTHTOKEN_KEY = 0x10000,
+
 };
 
 typedef enum{

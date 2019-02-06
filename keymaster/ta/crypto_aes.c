@@ -411,3 +411,75 @@ keymaster_error_t TA_aes_update(keymaster_operation_t *operation,
 out:
 	return res;
 }
+
+/*
+ * Initialize the `TEE_OperationHandle` for the given algorithm, mode,
+ * objecttype, objectusage, attributeid, key and iv.  If returns
+ * KM_ERROR_OK, the operation will be properly initialized (and should be
+ * freed with TEE_FreeOperation).
+ */
+keymaster_error_t TA_aes_init_operation(uint32_t algorithm, uint32_t mode,
+				uint32_t objecttype, uint32_t objectusage,
+				uint32_t attributeid,
+				void *keybuffer, uint32_t maxkeylen,
+				void *iv, size_t ivlen,
+				TEE_OperationHandle *op)
+{
+	TEE_Result result;
+	keymaster_error_t res = KM_ERROR_INVALID_ARGUMENT;
+	TEE_ObjectHandle trans_key;
+	TEE_Attribute attrs;
+
+	if (!keybuffer || !op)
+		goto out;
+
+	result = TEE_AllocateOperation(op,
+				    algorithm,
+				    mode,
+				    (maxkeylen * 8));
+	if (result != TEE_SUCCESS) {
+		EMSG("can not allocate operation (0x%x)", result);
+		res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
+		goto out;
+	}
+
+	result = TEE_AllocateTransientObject(objecttype,
+					  (maxkeylen * 8),
+					  &trans_key);
+	if (result != TEE_SUCCESS) {
+		EMSG("can not allocate transient object 0x%x", result);
+		res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
+		goto out1;
+	}
+	TEE_RestrictObjectUsage(trans_key, objectusage);
+
+	TEE_InitRefAttribute(&attrs,
+			     attributeid,
+			     keybuffer,
+			     maxkeylen);
+	result = TEE_PopulateTransientObject(trans_key, &attrs, 1);
+	if (result != TEE_SUCCESS) {
+		EMSG("populate transient object error");
+		res = KM_ERROR_INVALID_ARGUMENT;
+		goto out2;
+	}
+	result = TEE_SetOperationKey(*op, trans_key);
+	if (result != TEE_SUCCESS) {
+		EMSG("can not set operation key");
+		res = KM_ERROR_INVALID_ARGUMENT;
+		goto out2;
+	}
+
+	TEE_FreeTransientObject(trans_key);
+
+	TEE_CipherInit(*op, iv, ivlen);
+
+	return KM_ERROR_OK;
+
+out2:
+	TEE_FreeTransientObject(trans_key);
+out1:
+	TEE_FreeOperation(*op);
+out:
+	return res;
+}
