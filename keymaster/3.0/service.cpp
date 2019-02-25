@@ -23,29 +23,27 @@
 #include <utils/Log.h>
 
 #include <optee_keymaster/optee_keymaster.h>
+#include <optee_keymaster/optee_keymaster3_device.h>
 
-using android::hardware::configureRpcThreadpool;
-using android::hardware::joinRpcThreadpool;
+
 using android::hardware::keymaster::V3_0::IKeymasterDevice;
-using android::hardware::keymaster::V3_0::optee::OpteeKeymasterDevice;
-using ::android::OK;
-using ::android::sp;
-
-const uint32_t max_threads = 1;
 
 int main() {
     ALOGI("Loading...\n");
-    sp<IKeymasterDevice> keymaster = new (std::nothrow) OpteeKeymasterDevice;
-    if (keymaster == nullptr) {
+    ::android::hardware::configureRpcThreadpool(1, true);
+    auto optee_keymaster = new keymaster::OpteeKeymaster();
+    int err = optee_keymaster->Initialize();
+    if (err != 0) {
         ALOGE("Could not create keymaster instance");
-        return 1;
+        return -1;
     }
-    configureRpcThreadpool(max_threads, true);
-    if (keymaster->registerAsService() != OK) {
-        ALOGE("Could not register service.");
-        return 1;
-    }
-    joinRpcThreadpool();
 
-    return 0;
+    auto keymaster = new ::keymaster::OpteeKeymaster3Device(optee_keymaster);
+    if (keymaster->registerAsService() != android::OK) {
+        ALOGE("Could not register service for Keymaster 3.0 ");
+        return 1;
+    }
+
+    android::hardware::joinRpcThreadpool();
+    return -1;  // Should never get here.
 }

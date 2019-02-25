@@ -17,14 +17,22 @@
  #ifndef OPTEE_KEYMASTER_IPC_H
  #define OPTEE_KEYMASTER_IPC_H
 
+#include <keymaster/android_keymaster_messages.h>
+#include <optee_keymaster/ipc/keymaster_ipc.h>
 __BEGIN_DECLS
 
-bool optee_keystore_connect(void);
+#define TA_KEYMASTER_UUID { 0xdba51a17, 0x0563, 0x11e7, \
+		{ 0x93, 0xb1, 0x6f, 0xa7, 0xb0, 0x07, 0x1a, 0x51} }
 
-keymaster_error_t optee_keystore_call(uint32_t cmd, void* in, uint32_t in_size,
-                        void* out, uint32_t out_size);
+const uint32_t OPTEE_KEYMASTER_RECV_BUF_SIZE = 2 * PAGE_SIZE;
+const uint32_t OPTEE_KEYMASTER_SEND_BUF_SIZE = 2 * PAGE_SIZE;
 
-void optee_keystore_disconnect(void);
+int optee_keymaster_connect(void);
+
+keymaster_error_t optee_keymaster_call(uint32_t cmd, const keymaster::Serializable& req,
+                        keymaster::KeymasterResponse* rsp);
+
+void optee_keymaster_disconnect(void);
 
 const char* print_error_message(uint32_t error);
 
