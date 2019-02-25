@@ -22,7 +22,7 @@
 #include <hidl/LegacySupport.h>
 #include <utils/Log.h>
 
-#include "optee_keymaster.h"
+#include <optee_keymaster/optee_keymaster.h>
 
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;

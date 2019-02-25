@@ -20,8 +20,8 @@
 #include <memory>
 #include <new>
 
-#include "optee_keymaster.h"
-#include "optee_keymaster_ipc.h"
+#include <optee_keymaster/optee_keymaster.h>
+#include <optee_keymaster/ipc/optee_keymaster_ipc.h>
 
 #undef LOG_TAG
 #define LOG_TAG "OpteeKeymaster_cpp"

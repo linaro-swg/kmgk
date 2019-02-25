@@ -23,7 +23,7 @@
 #include <tee_client_api.h>
 #include <hardware/keymaster2.h>
 
-#include "optee_keymaster_ipc.h"
+#include <optee_keymaster/ipc/optee_keymaster_ipc.h>
 #include "common.h"
 
 #undef LOG_TAG
@@ -69,7 +69,7 @@ void optee_keystore_disconnect(void) {
 }
 
 const char* keymaster_error_message(uint32_t error) {
-    switch(error) {
+    switch((int)error) {
         case (KM_ERROR_OK):
             return "No error";
         case (KM_ERROR_UNSUPPORTED_PURPOSE):

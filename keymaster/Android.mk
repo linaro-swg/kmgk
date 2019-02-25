@@ -25,7 +25,7 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := android.hardware.keymaster@3.0-service.optee
-LOCAL_INIT_RC := android.hardware.keymaster@3.0-service.optee.rc
+LOCAL_INIT_RC := 3.0/android.hardware.keymaster@3.0-service.optee.rc
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_MODULE_TAGS := optional
 LOCAL_VENDOR_MODULE := true
@@ -34,11 +34,12 @@ LOCAL_CFLAGS = -Wall -Werror
 LOCAL_CFLAGS += -DANDROID_BUILD
 
 LOCAL_SRC_FILES := \
-	service.cpp \
+	3.0/service.cpp \
 	optee_keymaster.cpp \
-	optee_keymaster_ipc.c
+	ipc/optee_keymaster_ipc.cpp
 
 LOCAL_C_INCLUDES := \
+	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/ta/include
 
 LOCAL_SHARED_LIBRARIES := \
