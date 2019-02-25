@@ -104,6 +104,12 @@ uint64_t identifier_ec[] = {1, 2, 840, 10045, 2, 1};
  *        XYValue BIT_STRING } }
  */
 
+typedef struct tee_km_context {
+	bool version_info_set;
+	uint32_t os_version;
+	uint32_t os_patchlevel;
+} tee_km_context_t;
+
 static uint32_t TA_possibe_size(const uint32_t type,
 				const uint32_t key_size,
 				const keymaster_blob_t input,
