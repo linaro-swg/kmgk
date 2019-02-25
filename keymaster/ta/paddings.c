@@ -73,7 +73,7 @@ keymaster_error_t TA_add_pkcs7_pad(keymaster_blob_t *input,
 	if (input->data_length == 0 && !force)
 		return KM_ERROR_OK;
 	pad = BLOCK_SIZE - (input->data_length % BLOCK_SIZE);
-	DMSG("PKCS7 ADD pad = %x", pad);
+	DMSG("PKCS7 ADD pad = 0x%x", pad);
 	/* if input data size is a multiple of block size add
 	 * one extra block as padding
 	 */

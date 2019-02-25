@@ -704,7 +704,7 @@ keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
 				in_params->params[i].key_param.integer;
 			break;
 		default:
-			DMSG("Unused parameter with tag %x",
+			DMSG("Unused parameter with tag 0x%x",
 					key_params->params[i].tag);
 		}
 	}
@@ -748,7 +748,7 @@ keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
 	}
 
 	for (size_t j = 0; j < in_params->length; j++) {
-		DMSG("in_params->params[%zu].tag = %d",
+		DMSG("in_params->params[%zu].tag = 0x%x",
 				j, in_params->params[j].tag);
 		switch (in_params->params[j].tag) {
 		case KM_TAG_APPLICATION_ID:
@@ -814,7 +814,7 @@ keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
 					in_params->params[j].key_param.integer;
 			break;
 		default:
-			DMSG("Unused parameter with tag %x",
+			DMSG("Unused parameter with tag 0x%x",
 					in_params->params[j].tag);
 		}
 	}
