@@ -24,7 +24,6 @@
 #include <hardware/keymaster2.h>
 
 #include <optee_keymaster/ipc/optee_keymaster_ipc.h>
-#include "common.h"
 
 #undef LOG_TAG
 #define LOG_TAG "OpteeKeymaster_ipc"
@@ -33,7 +32,7 @@ static TEEC_Context ctx;
 static TEEC_Session sess;
 static bool connected = false;
 
-bool optee_keystore_connect(void) {
+int optee_keymaster_connect(void) {
     TEEC_Result res;
     TEEC_UUID uuid = TA_KEYMASTER_UUID;
     uint32_t err_origin;
@@ -45,7 +44,7 @@ bool optee_keystore_connect(void) {
     res = TEEC_InitializeContext(NULL, &ctx);
     if (res != TEEC_SUCCESS) {
         ALOGE("TEEC_InitializeContext failed with code 0x%x", res);
-        return false;
+        return (int)res;
     }
 
     /* Open a session to the TA */
@@ -55,14 +54,14 @@ bool optee_keystore_connect(void) {
         TEEC_FinalizeContext(&ctx);
         ALOGE("TEEC_Opensession failed with code 0x%x origin 0x%x",
                 res, err_origin);
-        return false;
+        return (int)res;
     }
     connected = true;
     ALOGI("Connection with keystore was established");
-    return true;
+    return 0;
 }
 
-void optee_keystore_disconnect(void) {
+void optee_keymaster_disconnect(void) {
     TEEC_CloseSession(&sess);
     TEEC_FinalizeContext(&ctx);
     connected  = false;
@@ -187,8 +186,8 @@ const char* keymaster_error_message(uint32_t error) {
     }
 }
 
-keymaster_error_t optee_keystore_call(uint32_t cmd, void* in, uint32_t in_size, void* out,
-                        uint32_t out_size) {
+keymaster_error_t optee_keymaster_call(uint32_t cmd, const keymaster::Serializable& req,
+                        keymaster::KeymasterResponse* rsp) {
     TEEC_Operation op;
     uint32_t res;
     uint32_t err_origin;
@@ -200,23 +199,47 @@ keymaster_error_t optee_keystore_call(uint32_t cmd, void* in, uint32_t in_size, 
     }
 
     (void)memset(&op, 0, sizeof(op));
+
+	uint32_t req_size = req.SerializedSize();
+    if (req_size > OPTEE_KEYMASTER_SEND_BUF_SIZE) {
+        ALOGE("Request too big: %u Max size: %u", req_size, OPTEE_KEYMASTER_SEND_BUF_SIZE);
+        return KM_ERROR_INVALID_INPUT_LENGTH;
+    }
+
+    uint8_t send_buf[OPTEE_KEYMASTER_SEND_BUF_SIZE];
+    keymaster::Eraser send_buf_eraser(send_buf, OPTEE_KEYMASTER_SEND_BUF_SIZE);
+    req.Serialize(send_buf, send_buf + req_size);
+
+    // Send it
+    uint8_t recv_buf[OPTEE_KEYMASTER_RECV_BUF_SIZE];
+    keymaster::Eraser recv_buf_eraser(recv_buf, OPTEE_KEYMASTER_RECV_BUF_SIZE);
+    uint32_t rsp_size = OPTEE_KEYMASTER_RECV_BUF_SIZE;
     op.paramTypes = (uint32_t)TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT,
                                                TEEC_MEMREF_TEMP_OUTPUT,
                                                TEEC_NONE,
                                                TEEC_NONE);
-        op.params[0].tmpref.buffer = (void*)in;
-        op.params[0].tmpref.size   = in_size;
-        op.params[1].tmpref.buffer = (void*)out;
-        op.params[1].tmpref.size   = out_size;
+        op.params[0].tmpref.buffer = (void*)send_buf;
+        op.params[0].tmpref.size   = req_size;
+        op.params[1].tmpref.buffer = (void*)recv_buf;
+        op.params[1].tmpref.size   = rsp_size;
 
     res = TEEC_InvokeCommand(&sess, cmd, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        ALOGI("TEEC_InvokeCommand failed with code 0x%08x (%s) origin 0x%08x",
-              res, keymaster_error_message(res), err_origin);
+        ALOGI("TEEC_InvokeCommand cmd %d failed with code 0x%08x (%s) origin 0x%08x",
+              cmd, res, keymaster_error_message(res), err_origin);
 	    if (res == TEEC_ERROR_TARGET_DEAD) {
-                optee_keystore_disconnect();
-                optee_keystore_connect();
+                optee_keymaster_disconnect();
+                optee_keymaster_connect();
 	    }
+	}
+
+    const uint8_t* p = recv_buf;
+    if (!rsp->Deserialize(&p, p + rsp_size)) {
+        ALOGE("Error deserializing response of size %d\n", (int)rsp_size);
+        return KM_ERROR_UNKNOWN_ERROR;
+    } else if (rsp->error != KM_ERROR_OK) {
+        ALOGE("Response of size %d contained error code %d\n", (int)rsp_size, (int)rsp->error);
+        return rsp->error;
     }
-    return (keymaster_error_t)res;
+    return rsp->error;
 }
