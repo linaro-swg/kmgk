@@ -164,12 +164,6 @@ TEE_Result TA_execute(uint8_t *data, const size_t size, const uint32_t mode)
 		res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
 		goto exit;
 	}
-	if (size % BLOCK_SIZE != 0) {
-		/* check size alignment */
-		EMSG("Size alignment check failed");
-		res = KM_ERROR_UNKNOWN_ERROR;
-		goto exit;
-	}
 	TEE_GetObjectInfo1(secretKey, &info);
 
 	res = TEE_AllocateOperation(&op, TEE_ALG_AES_GCM, mode, info.maxKeySize);

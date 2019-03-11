@@ -259,11 +259,6 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 
 	key_blob.key_material_size = characts_size + key_buffer_size
 			+ TAG_LENGTH;
-	if (key_blob.key_material_size % BLOCK_SIZE != 0) {
-		/* do size alignment */
-		key_blob.key_material_size += BLOCK_SIZE -
-			(key_blob.key_material_size % BLOCK_SIZE);
-	}
 
 	key_material = TEE_Malloc(key_blob.key_material_size,
 						TEE_MALLOC_FILL_ZERO);
@@ -510,11 +505,6 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	key_buffer_size = TA_get_key_size(key_algorithm);
 	key_blob.key_material_size = characts_size + key_buffer_size
 			+ TAG_LENGTH;
-	if (key_blob.key_material_size % BLOCK_SIZE != 0) {
-		/* size alignment */
-		key_blob.key_material_size += BLOCK_SIZE -
-			(key_blob.key_material_size % BLOCK_SIZE);
-	}
 	key_material = TEE_Malloc(key_blob.key_material_size,
 						TEE_MALLOC_FILL_ZERO);
 	if (!key_material) {
