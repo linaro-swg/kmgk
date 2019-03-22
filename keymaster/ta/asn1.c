@@ -267,14 +267,14 @@ out:
 	return res;
 }
 
-TEE_Result TA_gen_root_rsa_cert(const TEE_TASessionHandle sessionSTA,
+TEE_Result TA_gen_root_rsa_cert(const TEE_TASessionHandle sessionSTA __unused,
 				TEE_ObjectHandle root_rsa_key,
 				keymaster_blob_t *root_cert)
 {
 	return mbedTLS_gen_root_cert_rsa(root_rsa_key, root_cert);
 }
 
-TEE_Result TA_gen_root_ec_cert(const TEE_TASessionHandle sessionSTA,
+TEE_Result TA_gen_root_ec_cert(const TEE_TASessionHandle sessionSTA __unused,
 				TEE_ObjectHandle root_ec_key,
 				keymaster_blob_t *root_cert)
 {
@@ -290,6 +290,7 @@ TEE_Result TA_gen_attest_rsa_cert(const TEE_TASessionHandle sessionSTA,
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle rootAttKey = TEE_HANDLE_NULL;
+	keymaster_blob_t attest_ext = EMPTY_BLOB;
 
 	//Attested public key
 	uint32_t attest_key_attr_size = (RSA_MAX_KEY_BUFFER_SIZE + sizeof(uint32_t)) * 2;
@@ -302,27 +303,29 @@ TEE_Result TA_gen_attest_rsa_cert(const TEE_TASessionHandle sessionSTA,
 						sizeof(uint32_t) * 2 + 1,
 					   TEE_MALLOC_FILL_ZERO);
 
-	//Root attestation key
-	uint32_t root_key_attr_size = (RSA_KEY_BUFFER_SIZE + sizeof(uint32_t)) * KM_ATTR_COUNT_RSA;
-	uint8_t *root_key_attr = TEE_Malloc(root_key_attr_size, TEE_MALLOC_FILL_ZERO);
-
 	//Output certificate
 	uint32_t output_certificate_size = ATTEST_CERT_BUFFER_SIZE;
 	uint8_t *output_certificate = TEE_Malloc(output_certificate_size, TEE_MALLOC_FILL_ZERO);
 
 	uint32_t param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_MEMREF_INPUT, //attest pub key in format: size | buffer, ...
 						TEE_PARAM_TYPE_MEMREF_INPUT,  //key characteristics + params in format: size | buffer, ...
-						TEE_PARAM_TYPE_MEMREF_INPUT, //root key for sign in format: size | buffer, ...
-						TEE_PARAM_TYPE_MEMREF_OUTPUT); //certificate
+						TEE_PARAM_TYPE_MEMREF_OUTPUT, //certificate
+						TEE_PARAM_TYPE_NONE);
 	TEE_Param params[TEE_NUM_PARAMS];
 
 	uint8_t *tmp_keys_attr_buf = TEE_Malloc(RSA_MAX_KEY_BUFFER_SIZE, TEE_MALLOC_FILL_ZERO);
 	uint32_t keys_attr_buf_size = RSA_MAX_KEY_BUFFER_SIZE;
 
-	if (!attest_key_attr || !key_chr_attr || !root_key_attr
-			|| !output_certificate || !tmp_keys_attr_buf) {
+	if (!attest_key_attr || !key_chr_attr ||
+		!output_certificate || !tmp_keys_attr_buf) {
 		res = TEE_ERROR_OUT_OF_MEMORY;
 		EMSG("Failed to allocate memory for local buffers");
+		goto error_1;
+	}
+
+	if (sessionSTA == TEE_HANDLE_NULL) {
+		EMSG("Session with static TA is not opened");
+		res = KM_ERROR_SECURE_HW_COMMUNICATION_FAILED;
 		goto error_1;
 	}
 
@@ -370,12 +373,6 @@ TEE_Result TA_gen_attest_rsa_cert(const TEE_TASessionHandle sessionSTA,
 		EMSG("Failed to open root RSA attestation key, res=%x", res);
 		goto error_1;
 	}
-	//Serialize root RSA key-pair
-	res = TA_serialize_rsa_keypair(root_key_attr, &root_key_attr_size, rootAttKey);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to serialize root RSA attestation key, res=%x", res);
-		goto error_1;
-	}
 
 	///Link to command params
 	params[0].memref.buffer = attest_key_attr;
@@ -384,52 +381,48 @@ TEE_Result TA_gen_attest_rsa_cert(const TEE_TASessionHandle sessionSTA,
 	params[1].memref.buffer = key_chr_attr;
 	params[1].memref.size = key_chr_attr_size + att_param_size + sizeof(uint32_t) * 2;
 
-	params[2].memref.buffer = root_key_attr;
-	params[2].memref.size = root_key_attr_size;
+	params[2].memref.buffer = output_certificate;
+	params[2].memref.size = output_certificate_size;
 
-	params[3].memref.buffer = output_certificate;
-	params[3].memref.size = output_certificate_size;
-
-	if (sessionSTA == TEE_HANDLE_NULL) {
-		EMSG("Session with static TA is not opened");
-		res = KM_ERROR_SECURE_HW_COMMUNICATION_FAILED;
-		goto error_1;
-	}
 	//Invoke command
 	res = TEE_InvokeTACommand(sessionSTA, TEE_TIMEOUT_INFINITE,
-			CMD_ASN1_GEN_ATT_RSA_CERT, param_types, params, NULL);
+			CMD_ASN1_GEN_ATT_EXTENSION, param_types, params, NULL);
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to invoke ASN.1 command GEN_ATT_RSA_CERT, res=%x", res);
 		goto error_1;
 	}
 
-	cert_chain->entries[KEY_ATT_CERT_INDEX].data_length = 0;
-	if (params[3].memref.size == 0) {
-		EMSG("ASN.1 GEN_ATT_RSA_CERT output is empty");
+	if (params[2].memref.size == 0) {
+		EMSG("ASN.1 CMD_ASN1_GEN_ATT_EXTENSION output is empty");
 		res = KM_ERROR_UNKNOWN_ERROR;
 		goto error_1;
 	}
 
-	cert_chain->entries[KEY_ATT_CERT_INDEX].data_length = params[3].memref.size;
-	cert_chain->entries[KEY_ATT_CERT_INDEX].data = TEE_Malloc(
-			cert_chain->entries[KEY_ATT_CERT_INDEX].data_length,
-			TEE_MALLOC_FILL_ZERO);
-	if (!cert_chain->entries[KEY_ATT_CERT_INDEX].data) {
+	DMSG("attestation extension: \n");
+	DHEXDUMP(params[2].memref.buffer,
+		 params[2].memref.size);
+
+	attest_ext.data = params[2].memref.buffer;
+	attest_ext.data_length = params[2].memref.size;
+
+	cert_chain->entries[KEY_ATT_CERT_INDEX].data_length = output_certificate_size;
+	cert_chain->entries[KEY_ATT_CERT_INDEX].data = TEE_Malloc(output_certificate_size, TEE_MALLOC_FILL_ZERO);
+	if (cert_chain->entries[KEY_ATT_CERT_INDEX].data == NULL) {
 		res = TEE_ERROR_OUT_OF_MEMORY;
 		EMSG("Failed to allocate memory for attest certificate output");
 		goto error_1;
 	}
 
-	mbedTLS_gen_attest_key_cert_rsa(rootAttKey,
+	res = mbedTLS_gen_attest_key_cert_rsa(rootAttKey,
 					attestedKey,
-					&cert_chain->entries[KEY_ATT_CERT_INDEX]);
+					cert_chain,
+					&attest_ext);
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to generate key attestation, res=%x", res);
+		goto error_1;
+	}
 
-	DMSG("Origin certificate: \n");
-	//Copy ASN.1 DER certificate
-	TEE_MemMove(cert_chain->entries[KEY_ATT_CERT_INDEX].data,
-			params[3].memref.buffer,
-			cert_chain->entries[KEY_ATT_CERT_INDEX].data_length);
-
+	DMSG("mbedTLS certificate: \n");
 	DHEXDUMP(cert_chain->entries[KEY_ATT_CERT_INDEX].data,
 		 cert_chain->entries[KEY_ATT_CERT_INDEX].data_length);
 
@@ -439,9 +432,6 @@ error_1:
 	}
 	if (key_chr_attr) {
 		TEE_Free(key_chr_attr);
-	}
-	if (root_key_attr) {
-		TEE_Free(root_key_attr);
 	}
 	if (output_certificate) {
 		TEE_Free(output_certificate);
@@ -463,6 +453,7 @@ TEE_Result TA_gen_attest_ec_cert(const TEE_TASessionHandle sessionSTA,
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle rootAttKey = TEE_HANDLE_NULL;
+	keymaster_blob_t attest_ext = EMPTY_BLOB;
 
 	//Attested public key
 	uint32_t attest_key_attr_size =
@@ -477,28 +468,30 @@ TEE_Result TA_gen_attest_ec_cert(const TEE_TASessionHandle sessionSTA,
 						sizeof(uint32_t) * 2 + 1,
 					   TEE_MALLOC_FILL_ZERO);
 
-	//Root attestation key
-	uint32_t root_key_attr_size = (EC_KEY_BUFFER_SIZE + sizeof(uint32_t)) * KM_ATTR_COUNT_EC;
-	uint8_t *root_key_attr = TEE_Malloc(root_key_attr_size, TEE_MALLOC_FILL_ZERO);
-
 	//Output certificate
 	uint32_t output_certificate_size = ATTEST_CERT_BUFFER_SIZE;
 	uint8_t *output_certificate = TEE_Malloc(output_certificate_size, TEE_MALLOC_FILL_ZERO);
 
 	uint32_t param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_MEMREF_INPUT, //attest pub key in format: size | buffer, ...
 						TEE_PARAM_TYPE_MEMREF_INPUT,  //key characteristics + params in format: size | buffer, ...
-						TEE_PARAM_TYPE_MEMREF_INPUT, //root priv keys for sign in format: size | buffer, ...
-						TEE_PARAM_TYPE_MEMREF_OUTPUT); //certificate
+						TEE_PARAM_TYPE_MEMREF_OUTPUT, //certificate
+						TEE_PARAM_TYPE_NONE); 
 	TEE_Param params[TEE_NUM_PARAMS];
 
 	uint8_t *tmp_keys_attr_buf = TEE_Malloc(EC_MAX_KEY_BUFFER_SIZE, TEE_MALLOC_FILL_ZERO);
 	uint32_t keys_attr_buf_size = EC_MAX_KEY_BUFFER_SIZE;
 	uint32_t a = 0, b = 0, a_size = sizeof(uint32_t);
 
-	if (!attest_key_attr || !key_chr_attr || !root_key_attr
+	if (!attest_key_attr || !key_chr_attr
 			|| !output_certificate || !tmp_keys_attr_buf) {
 		res = TEE_ERROR_OUT_OF_MEMORY;
 		EMSG("Failed to allocate memory for local buffers");
+		goto error_1;
+	}
+
+	if (sessionSTA == TEE_HANDLE_NULL) {
+		EMSG("Session with static TA is not opened");
+		res = KM_ERROR_SECURE_HW_COMMUNICATION_FAILED;
 		goto error_1;
 	}
 
@@ -555,13 +548,6 @@ TEE_Result TA_gen_attest_ec_cert(const TEE_TASessionHandle sessionSTA,
 		goto error_1;
 	}
 
-	//Serialize root EC key-pair
-	res = TA_serialize_ec_keypair(root_key_attr, &root_key_attr_size, rootAttKey);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to serialize root EC attestation key, res=%x", res);
-		goto error_1;
-	}
-
 	///Link to command params
 	params[0].memref.buffer = attest_key_attr;
 	params[0].memref.size = attest_key_attr_size;
@@ -569,46 +555,50 @@ TEE_Result TA_gen_attest_ec_cert(const TEE_TASessionHandle sessionSTA,
 	params[1].memref.buffer = key_chr_attr;
 	params[1].memref.size = key_chr_attr_size + att_param_size + sizeof(uint32_t) * 2;
 
-	params[2].memref.buffer = root_key_attr;
-	params[2].memref.size = root_key_attr_size;
+	params[2].memref.buffer = output_certificate;
+	params[2].memref.size = output_certificate_size;
 
-	params[3].memref.buffer = output_certificate;
-	params[3].memref.size = output_certificate_size;
-
-	if (sessionSTA == TEE_HANDLE_NULL) {
-		EMSG("Session with static TA is not opened");
-		res = KM_ERROR_SECURE_HW_COMMUNICATION_FAILED;
-		goto error_1;
-	}
 	//Invoke command
 	res = TEE_InvokeTACommand(sessionSTA, TEE_TIMEOUT_INFINITE,
-			CMD_ASN1_GEN_ATT_EC_CERT, param_types, params, NULL);
+			CMD_ASN1_GEN_ATT_EXTENSION, param_types, params, NULL);
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to invoke ASN.1 command GEN_ATT_EC_CERT, res=%x", res);
 		goto error_1;
 	}
 
-	cert_chain->entries[KEY_ATT_CERT_INDEX].data_length = 0;
-	if (params[3].memref.size == 0) {
-		EMSG("ASN.1 GEN_ATT_EC_CERT output is empty");
+	if (params[2].memref.size == 0) {
+		EMSG("ASN.1 CMD_ASN1_GEN_ATT_EXTENSION output is empty");
 		res = KM_ERROR_UNKNOWN_ERROR;
 		goto error_1;
 	}
 
-	cert_chain->entries[KEY_ATT_CERT_INDEX].data_length = params[3].memref.size;
-	cert_chain->entries[KEY_ATT_CERT_INDEX].data = TEE_Malloc(
-			cert_chain->entries[KEY_ATT_CERT_INDEX].data_length,
-			TEE_MALLOC_FILL_ZERO);
-	if (!cert_chain->entries[KEY_ATT_CERT_INDEX].data) {
+	DMSG("attestation extension: \n");
+	DHEXDUMP(params[2].memref.buffer,
+		 params[2].memref.size);
+
+	attest_ext.data = params[2].memref.buffer;
+	attest_ext.data_length = params[2].memref.size;
+
+	cert_chain->entries[KEY_ATT_CERT_INDEX].data_length = output_certificate_size;
+	cert_chain->entries[KEY_ATT_CERT_INDEX].data = TEE_Malloc(output_certificate_size, TEE_MALLOC_FILL_ZERO);
+	if (cert_chain->entries[KEY_ATT_CERT_INDEX].data == NULL) {
 		res = TEE_ERROR_OUT_OF_MEMORY;
 		EMSG("Failed to allocate memory for attest certificate output");
 		goto error_1;
 	}
 
-	//Copy ASN.1 DER certificate
-	TEE_MemMove(cert_chain->entries[KEY_ATT_CERT_INDEX].data,
-			params[3].memref.buffer,
-			cert_chain->entries[KEY_ATT_CERT_INDEX].data_length);
+	res = mbedTLS_gen_attest_key_cert_ecc(rootAttKey,
+					attestedKey,
+					cert_chain,
+					&attest_ext);
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to generate key attestation, res=%x", res);
+		goto error_1;
+	}
+
+	DMSG("mbedTLS certificate: \n");
+	DHEXDUMP(cert_chain->entries[KEY_ATT_CERT_INDEX].data,
+		 cert_chain->entries[KEY_ATT_CERT_INDEX].data_length);
 
 error_1:
 	if (attest_key_attr) {
@@ -616,9 +606,6 @@ error_1:
 	}
 	if (key_chr_attr) {
 		TEE_Free(key_chr_attr);
-	}
-	if (root_key_attr) {
-		TEE_Free(root_key_attr);
 	}
 	if (output_certificate) {
 		TEE_Free(output_certificate);

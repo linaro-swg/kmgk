@@ -873,18 +873,18 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 	}
 	cert_chain.entry_count = ATT_CERT_CHAIN_LEN;
 
+	//Read Root attestation certificate (must be generated and stored before)
+	res = TA_read_root_attest_cert(key_type, &cert_chain);
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to read root att cert, res=%x", res);
+		goto exit;
+	}
 	//Generate key attestation certificate (using STA ASN.1)
 	res = TA_gen_key_attest_cert(sessionSTA, key_type, attestedKey,
 				     &attest_params, &key_chr, &cert_chain,
 				     verified_boot_state);
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to gen key att cert, res=%x", res);
-		goto exit;
-	}
-	//Read Root attestation certificate (must be generated and stored before)
-	res = TA_read_root_attest_cert(key_type, &cert_chain);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to read root att cert, res=%x", res);
 		goto exit;
 	}
 	//Check output buffer length

@@ -33,6 +33,7 @@
 #define CMD_ASN1_GEN_ROOT_EC_CERT 5
 #define CMD_ASN1_GEN_ATT_RSA_CERT 6
 #define CMD_ASN1_GEN_ATT_EC_CERT 7
+#define CMD_ASN1_GEN_ATT_EXTENSION 8
 
 keymaster_error_t TA_decode_pkcs8(const TEE_TASessionHandle sessionSTA,
 				keymaster_blob_t key_data,

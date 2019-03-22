@@ -705,8 +705,8 @@ TEE_Result TA_serialize_rsa_keypair(uint8_t *out,
 {
 	TEE_Result res = TEE_SUCCESS;
 	uint32_t readSize = 0;
-	uint8_t tmp_key_attr_buf[RSA_KEY_BUFFER_SIZE];
-	uint32_t key_attr_buf_size = RSA_KEY_BUFFER_SIZE;
+	uint8_t tmp_key_attr_buf[RSA_MAX_KEY_BUFFER_SIZE];
+	uint32_t key_attr_buf_size = RSA_MAX_KEY_BUFFER_SIZE;
 
 	DMSG("%s %d", __func__, __LINE__);
 	//Read root RSA key attributes
@@ -725,7 +725,7 @@ TEE_Result TA_serialize_rsa_keypair(uint8_t *out,
 			EMSG("Failed to read RSA attribute size, res=%x", res);
 			return res;
 		}
-		if (key_attr_buf_size > RSA_KEY_BUFFER_SIZE) {
+		if (key_attr_buf_size > RSA_MAX_KEY_BUFFER_SIZE) {
 			EMSG("Invalid RSA attribute size %d", key_attr_buf_size);
 			res = TEE_ERROR_BAD_STATE;
 			return res;
@@ -751,8 +751,8 @@ TEE_Result TA_serialize_ec_keypair(uint8_t *out,
 {
 	TEE_Result res = TEE_SUCCESS;
 	uint32_t readSize = 0;
-	uint8_t tmp_key_attr_buf[EC_KEY_BUFFER_SIZE];
-	uint32_t key_attr_buf_size = EC_KEY_BUFFER_SIZE;
+	uint8_t tmp_key_attr_buf[EC_MAX_KEY_BUFFER_SIZE];
+	uint32_t key_attr_buf_size = EC_MAX_KEY_BUFFER_SIZE;
 	uint32_t a = 0, a_size = sizeof(uint32_t);
 
 	DMSG("%s %d", __func__, __LINE__);
@@ -783,7 +783,7 @@ TEE_Result TA_serialize_ec_keypair(uint8_t *out,
 			EMSG("Failed to read EC attribute size, res=%x", res);
 			return res;
 		}
-		if (key_attr_buf_size > EC_KEY_BUFFER_SIZE) {
+		if (key_attr_buf_size > EC_MAX_KEY_BUFFER_SIZE) {
 			EMSG("Invalid EC attribute size %d", key_attr_buf_size);
 			res = TEE_ERROR_BAD_STATE;
 			return res;
