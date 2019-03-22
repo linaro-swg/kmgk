@@ -91,7 +91,7 @@ void free_attrs(TEE_Attribute *attrs, uint32_t size)
 	if (!attrs)
 		return;
 	for (uint32_t i = 0; i < size; i++) {
-		if (!is_attr_value(attrs[i].attributeID))
+		if ((!is_attr_value(attrs[i].attributeID)) && (attrs[i].content.ref.buffer != NULL))
 			(void)TEE_Free(attrs[i].content.ref.buffer);
 	}
 	(void)TEE_Free(attrs);

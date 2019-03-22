@@ -168,8 +168,8 @@ static TEE_Result TA_set_rsa_attest_key(TEE_TASessionHandle sessionSTA, keymaste
 {
 	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
 	TEE_ObjectHandle RSAobject = TEE_HANDLE_NULL;
-	TEE_Attribute	 	*attrs;
-	uint32_t			attrs_count;
+	TEE_Attribute	 	*attrs = NULL;
+	uint32_t			attrs_count = 0;
 	uint64_t key_rsa_public_exponent = UNDEFINED;
 	uint32_t key_size = UNDEFINED;
 
@@ -201,7 +201,7 @@ static TEE_Result TA_set_rsa_attest_key(TEE_TASessionHandle sessionSTA, keymaste
 
 	for (uint32_t i = 0; i < attrs_count; i++) {
 		//Store RSA key in format: size | buffer attribute
-		DMSG("%s %d attrs[i].attributeID 0x%08X", __func__, __LINE__,attrs[i].attributeID);
+		DMSG("%s %d attrs[i].attributeID 0x%08X size %d", __func__, __LINE__,attrs[i].attributeID, attrs[i].content.ref.length);
 		result = TA_write_attest_obj_attr(RSAobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
 		if (result != TEE_SUCCESS) {
 			EMSG("Failed to write RSA attribute %x, res=%x",
@@ -224,8 +224,8 @@ static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster
 {
 	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
 	TEE_ObjectHandle ECobject = TEE_HANDLE_NULL;
-	TEE_Attribute *attrs;
-	uint32_t attrs_count;
+	TEE_Attribute *attrs = NULL;
+	uint32_t attrs_count = 0;
 	uint64_t key_rsa_public_exponent = UNDEFINED;
 	uint32_t key_size = UNDEFINED;
 	uint32_t curve = UNDEFINED;
@@ -269,7 +269,7 @@ static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster
 
 	for (uint32_t i = 0; i < attrs_count; i++) {
 		//Attributes are "Ref"
-		DMSG("%s %d attrs[i].attributeID 0x%08X", __func__, __LINE__,attrs[i].attributeID);
+		DMSG("%s %d attrs[i].attributeID 0x%08X size %d", __func__, __LINE__,attrs[i].attributeID, attrs[i].content.ref.length);
 		result = TA_write_attest_obj_attr(ECobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
 		if (result != TEE_SUCCESS) {
 			EMSG("Failed to write EC attribute %x, res=%x",
@@ -754,6 +754,7 @@ TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA, uint32_t type,
 				  uint8_t verified_boot)
 {
 	TEE_Result res = TEE_SUCCESS;
+
 	if (type == TEE_TYPE_RSA_KEYPAIR) {
 		res = TA_gen_attest_rsa_cert(sessionSTA, attestedKey,
 					     attest_params, key_chr,
@@ -763,6 +764,7 @@ TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA, uint32_t type,
 					    attest_params, key_chr,
 					    cert_chain, verified_boot);
 	} else {
+		res = TEE_ERROR_BAD_PARAMETERS;
 	}
 
 	if (res != TEE_SUCCESS) {
