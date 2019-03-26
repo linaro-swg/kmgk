@@ -269,7 +269,8 @@ static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster
 
 	for (uint32_t i = 0; i < attrs_count; i++) {
 		//Attributes are "Ref"
-		DMSG("%s %d attrs[i].attributeID 0x%08X size %d", __func__, __LINE__,attrs[i].attributeID, attrs[i].content.ref.length);
+		DMSG("attributeID 0x%08X size %d", attrs[i].attributeID, attrs[i].content.ref.length);
+
 		result = TA_write_attest_obj_attr(ECobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
 		if (result != TEE_SUCCESS) {
 			EMSG("Failed to write EC attribute %x, res=%x",

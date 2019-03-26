@@ -101,6 +101,7 @@ keymaster_error_t TA_decode_pkcs8(const TEE_TASessionHandle sessionSTA,
 		if (algorithm == KM_ALGORITHM_RSA && *attrs_count == 1 &&
 					*rsa_public_exponent == UNDEFINED)
 			TEE_MemMove(rsa_public_exponent, buf, attr_size);
+
 		TEE_InitRefAttribute(*attrs + *attrs_count,
 				tag, buf, attr_size);
 		(*attrs_count)++;

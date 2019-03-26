@@ -156,8 +156,6 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 
 				goto out;
 			}
-			DHEXDUMP(key_attr_buf, key_attr_buf_size);
-
 		}
 	} else {
 		/* User transient object API */
@@ -225,9 +223,9 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 		goto out;
 	}
 
-	if ((mbedtls_ret = mbedtls_mpi_copy(&ecc->Q.X, &attrs[0]) != 0) ||
-	    (mbedtls_ret = mbedtls_mpi_copy(&ecc->Q.Y, &attrs[1]) != 0) ||
-	    (mbedtls_ret = mbedtls_mpi_copy(&ecc->d, &attrs[2]) != 0) ||
+	if ((mbedtls_ret = mbedtls_mpi_copy(&ecc->Q.X, &attrs[1]) != 0) ||
+	    (mbedtls_ret = mbedtls_mpi_copy(&ecc->Q.Y, &attrs[2]) != 0) ||
+	    (mbedtls_ret = mbedtls_mpi_copy(&ecc->d, &attrs[0]) != 0) ||
 	    (mbedtls_ret = mbedtls_mpi_lset(&ecc->Q.Z, 1 ) != 0)) {
 		EMSG("mbedtls_ecc import failed returned %d\n\n", mbedtls_ret);
 		res = TEE_ERROR_BAD_FORMAT;
@@ -740,6 +738,7 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 		res = TEE_ERROR_BAD_FORMAT;
 		goto out;
 	}
+
 	/*
 	 * from https://tls.mbed.org/api/x509__crt_8h.html:
 	 * Write a built up certificate to a X509 DER structure Note: data is
