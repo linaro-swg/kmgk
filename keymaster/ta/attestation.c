@@ -559,7 +559,6 @@ static TEE_Result TA_create_ec_attest_key(void)
 					goto error_3;
 				}
 
-				DHEXDUMP(buffer, buffSize);
 				//Store EC key in format: size | buffer attribute
 				res = TA_write_attest_obj_attr(ECobject, buffer, buffSize);
 				if (res != TEE_SUCCESS) {
@@ -760,7 +759,6 @@ TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA, uint32_t type,
 				  uint8_t verified_boot)
 {
 	TEE_Result res = TEE_SUCCESS;
-
 	if (type == TEE_TYPE_RSA_KEYPAIR) {
 		res = TA_gen_attest_rsa_cert(sessionSTA, attestedKey,
 					     attest_params, key_chr,
