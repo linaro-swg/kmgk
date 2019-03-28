@@ -60,7 +60,7 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 						      TEE_ATTR_ECC_PUBLIC_VALUE_Y };
 
 	mbedtls_ecdsa_context      *ecc = NULL;
-	mbedtls_mpi              attrs[KM_ATTR_COUNT_EC - 1] = {0};
+	mbedtls_mpi              attrs[KM_ATTR_COUNT_EC - 1] = {{0}};
 	mbedtls_entropy_context  entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
 	mbedtls_ecp_group_id grp_id;
@@ -269,8 +269,8 @@ static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 						       TEE_ATTR_RSA_COEFFICIENT };
 
 	/* mbedTLS-related definitions */
-	mbedtls_rsa_context *rsa;
-	mbedtls_mpi attrs[KM_ATTR_COUNT_RSA] = {0};
+	mbedtls_rsa_context *rsa = NULL;
+	mbedtls_mpi attrs[KM_ATTR_COUNT_RSA] = {{0}};
 	mbedtls_entropy_context entropy;
 	mbedtls_ctr_drbg_context ctr_drbg;
 	mbedtls_mpi K;
@@ -306,6 +306,11 @@ static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 
 	rsa = (mbedtls_rsa_context *) TEE_Malloc(sizeof(mbedtls_rsa_context),
 					       TEE_MALLOC_FILL_ZERO);
+	if (rsa == NULL)
+	{
+		res = TEE_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
 
 	mbedtls_rsa_init(rsa, MBEDTLS_RSA_PKCS_V15, 0);
 
@@ -537,9 +542,6 @@ static TEE_Result mbedTLS_gen_root_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
-	DMSG("Generated certificate: \n");
-	DHEXDUMP(buf + blen - ret, ret);
-
 	if (root_cert->data_length < (uint32_t)ret)
 	{
 		res = TEE_ERROR_SHORT_BUFFER;
@@ -767,9 +769,6 @@ TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
 
     mbedtls_x509_crt_init( cert );
 
-	DMSG("root certificate: \n");
-	DHEXDUMP(p,cert_len);
-
     if( ( mbedtls_x509_crt_parse_der( cert,
                                             p, cert_len ) ) != 0 )
     {
@@ -834,9 +833,6 @@ TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
         return TEE_ERROR_OUT_OF_MEMORY;
 
     mbedtls_x509_crt_init( cert );
-
-	DMSG("root certificate: \n");
-	DHEXDUMP(p,cert_len);
 
     if( ( mbedtls_x509_crt_parse_der( cert,
                                             p, cert_len ) ) != 0 )

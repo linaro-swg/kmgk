@@ -398,10 +398,6 @@ TEE_Result TA_gen_attest_rsa_cert(const TEE_TASessionHandle sessionSTA,
 		goto error_1;
 	}
 
-	DMSG("attestation extension: \n");
-	DHEXDUMP(params[2].memref.buffer,
-		 params[2].memref.size);
-
 	attest_ext.data = params[2].memref.buffer;
 	attest_ext.data_length = params[2].memref.size;
 
@@ -421,10 +417,6 @@ TEE_Result TA_gen_attest_rsa_cert(const TEE_TASessionHandle sessionSTA,
 		EMSG("Failed to generate key attestation, res=%x", res);
 		goto error_1;
 	}
-
-	DMSG("mbedTLS certificate: \n");
-	DHEXDUMP(cert_chain->entries[KEY_ATT_CERT_INDEX].data,
-		 cert_chain->entries[KEY_ATT_CERT_INDEX].data_length);
 
 error_1:
 	if (attest_key_attr) {
@@ -572,10 +564,6 @@ TEE_Result TA_gen_attest_ec_cert(const TEE_TASessionHandle sessionSTA,
 		goto error_1;
 	}
 
-	DMSG("attestation extension: \n");
-	DHEXDUMP(params[2].memref.buffer,
-		 params[2].memref.size);
-
 	attest_ext.data = params[2].memref.buffer;
 	attest_ext.data_length = params[2].memref.size;
 
@@ -595,10 +583,6 @@ TEE_Result TA_gen_attest_ec_cert(const TEE_TASessionHandle sessionSTA,
 		EMSG("Failed to generate key attestation, res=%x", res);
 		goto error_1;
 	}
-
-	DMSG("mbedTLS certificate: \n");
-	DHEXDUMP(cert_chain->entries[KEY_ATT_CERT_INDEX].data,
-		 cert_chain->entries[KEY_ATT_CERT_INDEX].data_length);
 
 error_1:
 	if (attest_key_attr) {

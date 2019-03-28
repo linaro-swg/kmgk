@@ -178,7 +178,6 @@ keymaster_error_t TA_rsa_finish(keymaster_operation_t *operation,
 				 */
 				res = TA_do_rsa_pad(&in_buf, &in_buf_l,
 								key_size);
-
 				input->data = in_buf; /*Will be freed in TA_finish*/
 				if (res != KM_ERROR_OK)
 					goto out;
