@@ -20,46 +20,12 @@
 LOCAL_PATH:= $(call my-dir)
 
 ################################################################################
-# Build keymaster HAL                                                          #
-################################################################################
-include $(CLEAR_VARS)
-
-LOCAL_MODULE := android.hardware.keymaster@3.0-service.optee
-LOCAL_INIT_RC := android.hardware.keymaster@3.0-service.optee.rc
-LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_MODULE_TAGS := optional
-LOCAL_VENDOR_MODULE := true
-
-LOCAL_CFLAGS = -Wall -Werror
-LOCAL_CFLAGS += -DANDROID_BUILD
-
-LOCAL_SRC_FILES := \
-	service.cpp \
-	optee_keymaster.cpp \
-	optee_keymaster_ipc.c
-
-LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/ta/include
-
-LOCAL_SHARED_LIBRARIES := \
-	libteec \
-	liblog \
-	libhidlbase \
-	libhidltransport \
-	libhardware \
-	libutils \
-	libcutils \
-	android.hardware.keymaster@3.0
-
-include $(BUILD_EXECUTABLE)
-
-################################################################################
-# Build wait_for_keymaster_optee
+# Build keymaster wait module                                                  #
 ################################################################################
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := wait_for_keymaster_optee
-LOCAL_INIT_RC := wait/wait_for_keymaster_optee.rc
+LOCAL_INIT_RC := wait_for_keymaster_optee.rc
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_MODULE_TAGS := optional
 LOCAL_VENDOR_MODULE := true
@@ -69,11 +35,11 @@ LOCAL_CFLAGS = -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused
 LOCAL_CFLAGS += -DANDROID_BUILD
 
 LOCAL_SRC_FILES := \
-	wait/wait_for_keymaster_optee.cpp \
-	wait/Keymaster.cpp
+	wait_for_keymaster_optee.cpp \
+	Keymaster.cpp
 
 LOCAL_C_INCLUDES := \
-	$(LOCAL_PATH)/wait
+	$(LOCAL_PATH)
 
 LOCAL_SHARED_LIBRARIES := \
 	libbase \
@@ -87,10 +53,5 @@ LOCAL_SHARED_LIBRARIES := \
 	libkeymaster4support
 
 include $(BUILD_EXECUTABLE)
-
-################################################################################
-# Build keymaster HAL TA                                                       #
-################################################################################
-include $(LOCAL_PATH)/ta/Android.mk
 
 #endif # Include only for HiKey ones.

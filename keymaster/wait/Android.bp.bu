@@ -1,0 +1,49 @@
+cc_defaults {
+    name: "wait_default_flags",
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wextra",
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+        "-Wno-unused-variable",
+    ],
+
+    clang: true,
+
+    tidy: true,
+    tidy_checks: [
+        "-*",
+        "cert-*",
+        "clang-analyzer-security*",
+    ],
+    tidy_flags: [
+        "-warnings-as-errors=clang-analyzer-security*,cert-*",
+    ],
+}
+
+cc_binary {
+    name: "wait_for_keymaster_optee",
+    relative_install_path: "hw",
+    proprietary: true,
+    defaults: ["wait_default_flags"],
+
+    srcs: [
+        "wait_for_keymaster_optee.cpp",
+        "Keymaster.cpp",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder",
+
+        "android.hardware.keymaster@3.0",
+        "android.hardware.keymaster@4.0",
+        "libhardware",
+        "libhardware_legacy",
+        "libhidlbase",
+        "libhwbinder",
+        "libkeymaster4support",
+    ],
+    init_rc: ["wait_for_keymaster_optee.rc"],
+}
