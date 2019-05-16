@@ -550,6 +550,7 @@ static TEE_Result mbedTLS_gen_root_cert(mbedtls_pk_context *issuer_key,
 	if (root_cert->data_length < (uint32_t)ret)
 	{
 		res = TEE_ERROR_SHORT_BUFFER;
+		root_cert->data_length = ret;
 		goto out;
 	}
 	root_cert->data_length = ret;
@@ -577,8 +578,20 @@ TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle rsa_root_key,
 		return res;
 	}
 
-	mbedTLS_gen_root_cert(&issuer_key, rsa_root_cert, cert_root_subject_rsa);
-	if (res) {
+	res = mbedTLS_gen_root_cert(&issuer_key, rsa_root_cert, cert_root_subject_rsa);
+	if (res != TEE_ERROR_SHORT_BUFFER)
+	{
+		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
+		goto out;
+	}
+	rsa_root_cert->data = TEE_Malloc(rsa_root_cert->data_length, TEE_MALLOC_FILL_ZERO);
+	if (rsa_root_cert->data == NULL)
+	{
+		res = TEE_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
+	res = mbedTLS_gen_root_cert(&issuer_key, rsa_root_cert, cert_root_subject_rsa);
+	if (res != TEE_SUCCESS ) {
 		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
 		goto out;
 	}
@@ -602,8 +615,20 @@ TEE_Result mbedTLS_gen_root_cert_ecc(TEE_ObjectHandle ecc_root_key,
 		return res;
 	}
 
-	mbedTLS_gen_root_cert(&issuer_key, ecc_root_cert, cert_root_subject_ecc);
-	if (res) {
+	res = mbedTLS_gen_root_cert(&issuer_key, ecc_root_cert, cert_root_subject_ecc);
+	if (res != TEE_ERROR_SHORT_BUFFER)
+	{
+		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
+		goto out;
+	}
+	ecc_root_cert->data = TEE_Malloc(ecc_root_cert->data_length, TEE_MALLOC_FILL_ZERO);
+	if (ecc_root_cert->data == NULL)
+	{
+		res = TEE_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
+	res = mbedTLS_gen_root_cert(&issuer_key, ecc_root_cert, cert_root_subject_ecc);
+	if (res != TEE_SUCCESS ) {
 		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
 		goto out;
 	}
@@ -737,6 +762,7 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 	if (attest_cert->data_length < (uint32_t)ret)
 	{
 		res = TEE_ERROR_SHORT_BUFFER;
+		attest_cert->data_length = ret;
 		goto out;
 	}
 	attest_cert->data_length = ret;
