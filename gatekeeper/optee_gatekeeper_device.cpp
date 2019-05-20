@@ -31,6 +31,7 @@ namespace V1_0 {
 namespace optee {
 
 OpteeGateKeeperDevice::OpteeGateKeeperDevice()
+    : connected_(false)
 {
     connect();
 }

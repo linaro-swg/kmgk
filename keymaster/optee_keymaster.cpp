@@ -221,7 +221,9 @@ static inline hidl_vec<KeyParameter> kmParamSet2Hidl(const keymaster_key_param_s
 
 /*OpteeKeymasterDevice implementation*/
 
-OpteeKeymasterDevice::OpteeKeymasterDevice() {
+OpteeKeymasterDevice::OpteeKeymasterDevice()
+    : is_connected_(false)
+{
     connect();
 }
 
