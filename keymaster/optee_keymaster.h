@@ -136,7 +136,7 @@ private:
     const bool supports_all_digests_ = true;
     const bool is_secure_ = true;
     const char *name_ = "OP-TEE Keymaster HALv3_0";
-    const char *author_ = "OP-TEE Electronics";
+    const char *author_ = "OP-TEE Foundation";
 };
 
 } // namespace optee
