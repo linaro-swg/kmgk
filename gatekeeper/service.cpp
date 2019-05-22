@@ -48,7 +48,7 @@ int main() {
         return 1;
     }
     configureRpcThreadpool(max_threads, true);
-    if (gatekeeper->registerAsService("optee") != OK) {
+    if (gatekeeper->registerAsService() != OK) {
         ALOGE("Could not register service.");
         return 1;
     }

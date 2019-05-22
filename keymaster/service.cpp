@@ -48,7 +48,7 @@ int main() {
         return 1;
     }
     configureRpcThreadpool(max_threads, true);
-    if (keymaster->registerAsService("optee") != OK) {
+    if (keymaster->registerAsService() != OK) {
         ALOGE("Could not register service.");
         return 1;
     }
