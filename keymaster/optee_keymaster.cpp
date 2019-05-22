@@ -231,6 +231,11 @@ OpteeKeymasterDevice::~OpteeKeymasterDevice() {
     disconnect();
 }
 
+bool OpteeKeymasterDevice::getIsConnected() {
+    ALOGD("%s %d is_connected_ = %d", __func__, __LINE__, is_connected_);
+    return is_connected_;
+}
+
 Return<void>  OpteeKeymasterDevice::getHardwareFeatures(getHardwareFeatures_cb _hidl_cb) {
     //send results off to the client
     ALOGD("%s %d", __func__, __LINE__);

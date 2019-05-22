@@ -55,6 +55,7 @@ class OpteeKeymasterDevice: public IKeymasterDevice {
 public:
     OpteeKeymasterDevice();
     ~OpteeKeymasterDevice();
+    bool getIsConnected();
 
     Return<void> getHardwareFeatures(getHardwareFeatures_cb _hidl_cb);
     Return<ErrorCode> addRngEntropy(const hidl_vec<uint8_t> &data) override;

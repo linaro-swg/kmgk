@@ -41,6 +41,11 @@ OpteeGateKeeperDevice::~OpteeGateKeeperDevice()
     disconnect();
 }
 
+bool OpteeGateKeeperDevice::getConnected() {
+    ALOGD("%s %d connected_ = %d", __func__, __LINE__, connected_);
+    return connected_;
+}
+
 Return<void> OpteeGateKeeperDevice::enroll(uint32_t uid,
         const hidl_vec<uint8_t>& currentPasswordHandle,
         const hidl_vec<uint8_t>& currentPassword,

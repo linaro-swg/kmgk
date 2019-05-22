@@ -34,8 +34,15 @@ using ::android::sp;
 const uint32_t max_threads = 1;
 
 int main() {
+    ALOGD("Checking km connection to optee_os");
+    OpteeKeymasterDevice *km = new (std::nothrow) OpteeKeymasterDevice;
+    if (!km->getIsConnected()) {
+        ALOGE("keymaster failed to connect to optee_os");
+        return 1;
+    }
+
     ALOGI("Loading...\n");
-    sp<IKeymasterDevice> keymaster = new (std::nothrow) OpteeKeymasterDevice;
+    sp<IKeymasterDevice> keymaster = km;
     if (keymaster == nullptr) {
         ALOGE("Could not create keymaster instance");
         return 1;
@@ -47,5 +54,5 @@ int main() {
     }
     joinRpcThreadpool();
 
-    return 0;
+    return 0; // should never get here
 }

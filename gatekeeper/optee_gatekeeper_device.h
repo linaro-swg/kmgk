@@ -46,6 +46,7 @@ class OpteeGateKeeperDevice : public IGatekeeper
 public:
     OpteeGateKeeperDevice();
     ~OpteeGateKeeperDevice();
+    bool getConnected();
 
     // Methods from ::android::hardware::gatekeeper::V1_0::IGatekeeper follow.
     Return<void> enroll(uint32_t uid,

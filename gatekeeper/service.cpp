@@ -34,8 +34,15 @@ using ::android::sp;
 const uint32_t max_threads = 1;
 
 int main() {
+    ALOGD("Checking gk connection to optee_os");
+    OpteeGateKeeperDevice *gk = new (std::nothrow) OpteeGateKeeperDevice;
+    if (!gk->getConnected()) {
+        ALOGE("gatekeeper failed to connect to optee_os");
+        return 1;
+    }
+
     ALOGI("Loading...");
-    sp<IGatekeeper> gatekeeper = new (std::nothrow) OpteeGateKeeperDevice;
+    sp<IGatekeeper> gatekeeper = gk;
     if (gatekeeper == nullptr) {
         ALOGE("Could not create gatekeeper instance");
         return 1;
@@ -47,5 +54,5 @@ int main() {
     }
     joinRpcThreadpool();
 
-    return 0;
+    return 0; // should never get here
 }
