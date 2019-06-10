@@ -69,8 +69,7 @@ LOCAL_CFLAGS = -Wall -Werror -Wextra -Wno-missing-field-initializers -Wno-unused
 LOCAL_CFLAGS += -DANDROID_BUILD
 
 LOCAL_SRC_FILES := \
-	wait/wait_for_keymaster_optee.cpp \
-	wait/Keymaster.cpp
+	wait/wait_for_keymaster_optee.cpp
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/wait
