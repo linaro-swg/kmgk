@@ -190,18 +190,6 @@ keymaster_error_t TA_rsa_finish(keymaster_operation_t *operation,
 			}
 		} else if (operation->purpose == KM_PURPOSE_VERIFY ) {
 			/* Input is signature */
-			if (in_buf_l < key_size / 8) {
-				/* the data must be zero-padded on
-				 * the left before verify/decryption
-				 */
-				res = TA_do_rsa_pad(&in_buf, &in_buf_l,
-								key_size);
-
-				input->data = in_buf; /*Will be freed in TA_finish*/
-				if (res != KM_ERROR_OK)
-					goto out;
-			}
-
 			in_buf = signature.data;
 			in_buf_l = signature.data_length;
 		}
@@ -276,8 +264,9 @@ keymaster_error_t TA_rsa_finish(keymaster_operation_t *operation,
 
 					output->data_length = *out_size;
 					*out_size = 0;
+					/* input->data starts from zero-byte */
 					if (TEE_MemCompare(output->data,
-							   input->data,
+							   input->data + 1,
 							   output->data_length) != 0) {
 						EMSG("RSA no pad verification signature failed");
 						res = KM_ERROR_VERIFICATION_FAILED;
