@@ -428,6 +428,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 				key_algorithm != KM_ALGORITHM_HMAC) {
 			EMSG("Only HMAC and AES keys can imported in raw format");
 			res = KM_ERROR_UNSUPPORTED_KEY_FORMAT;
+//			goto out;
 		}
 		if (key_size == UNDEFINED)
 			key_size = key_data.data_length * 8;
@@ -468,6 +469,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 				key_algorithm != KM_ALGORITHM_EC) {
 			EMSG("Only TA_serialize_characteristicsRSA and EC keys can imported in PKCS8 fromat");
 			res = KM_ERROR_UNSUPPORTED_KEY_FORMAT;
+//			goto out;
 		}
 		res = TA_decode_pkcs8(sessionSTA, key_data, &attrs_in,
 				&attrs_in_count, key_algorithm, &key_size,
@@ -498,7 +500,8 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 			if (key_size > MAX_KEY_RSA) {
 				EMSG("RSA key size must be multiple of 8 and less than %u",
 								MAX_KEY_RSA);
-				return KM_ERROR_UNSUPPORTED_KEY_SIZE;
+				res = KM_ERROR_UNSUPPORTED_KEY_SIZE;
+				goto out;
 			}
 		}
 	}

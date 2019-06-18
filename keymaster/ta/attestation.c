@@ -853,6 +853,11 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 {
 	TEE_Result res = TEE_SUCCESS;
 	uint32_t actual_read = 0;
+	uint8_t* pBuf = NULL;
+	uint32_t nBufLen = 0;
+
+	if ((buffer == NULL) || (buffSize == NULL))
+		return TEE_ERROR_BAD_PARAMETERS;
 
 	res = TEE_SeekObjectData(attObj, 0, TEE_DATA_SEEK_SET);
 	if (res != TEE_SUCCESS) {
@@ -861,24 +866,29 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 	}
 
 	//Read root certificate, index[1], length
-	res = TEE_ReadObjectData(attObj, buffSize, sizeof(size_t), &actual_read);
+	res = TEE_ReadObjectData(attObj, &nBufLen, sizeof(size_t), &actual_read);
 	if (res != TEE_SUCCESS || actual_read != sizeof(size_t)) {
 		EMSG("Failed to read root certificate length, res=%x", res);
 		return res;
 	}
 
-	*buffer = TEE_Malloc(*buffSize, TEE_MALLOC_FILL_ZERO);
-	if (*buffer == NULL) {
+	pBuf = TEE_Malloc(nBufLen, TEE_MALLOC_FILL_ZERO);
+	if (pBuf == NULL) {
 		EMSG("Failed to allocate memory for root certificate data");
 		res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
 		return res;
 	}
+
 	//Read root certificate, index[1], DER data
-	res = TEE_ReadObjectData(attObj, *buffer, *buffSize, &actual_read);
-	if (res != TEE_SUCCESS || actual_read != *buffSize) {
+	res = TEE_ReadObjectData(attObj, pBuf, nBufLen, &actual_read);
+	if (res != TEE_SUCCESS || actual_read != nBufLen) {
 		EMSG("Failed to read root certificate data, res=%x", res);
-		return res;
+		TEE_Free(pBuf);
+	} else {
+		*buffer = pBuf;
+		*buffSize = nBufLen;
 	}
+
 	return res;
 }
 

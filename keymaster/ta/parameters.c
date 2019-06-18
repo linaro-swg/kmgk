@@ -293,6 +293,7 @@ keymaster_error_t TA_fill_characteristics(
 					TEE_MALLOC_FILL_ZERO);
 	if (!characteristics->sw_enforced.params) {
 		EMSG("Failed to allocate memory for sw_enforced.params");
+		TEE_Free(characteristics->hw_enforced.params);
 		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
 	}
 	characteristics->sw_enforced.length = 0;
