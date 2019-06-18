@@ -541,6 +541,9 @@ keymaster_error_t TA_restore_key(uint8_t *key_material,
 		EMSG("Failed to allocate memory for key_material");
 		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
 	}
+
+	*obj_h = TEE_HANDLE_NULL;
+
 	TEE_MemMove(key_material, key_blob->key_material,
 					key_blob->key_material_size);
 	res = TA_decrypt(key_material, key_blob->key_material_size);
@@ -667,6 +670,10 @@ keymaster_error_t TA_restore_key(uint8_t *key_material,
 		goto out_rk;
 	TA_add_origin(params_t, KM_ORIGIN_UNKNOWN, false);
 out_rk:
+	if (res != KM_ERROR_OK)
+	{
+		TEE_FreeTransientObject(*obj_h);
+	}
 	free_attrs(attrs, attrs_count);
 
 	return res;
@@ -692,6 +699,9 @@ keymaster_error_t TA_create_operation(TEE_OperationHandle *operation,
 		EMSG("Can not find mode for such purpose");
 		return KM_ERROR_UNSUPPORTED_PURPOSE;
 	}
+
+	*operation = TEE_HANDLE_NULL;
+
 	switch (algorithm) {
 	case (KM_ALGORITHM_AES):
 		switch (op_mode) {
@@ -904,6 +914,10 @@ keymaster_error_t TA_create_operation(TEE_OperationHandle *operation,
 		goto out_co;
 	}
 out_co:
+	if ((res != TEE_SUCCESS) && (*operation != TEE_HANDLE_NULL))
+	{
+		TEE_FreeOperation(*operation);
+	}
 	return res;
 }
 

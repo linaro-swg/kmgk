@@ -67,6 +67,8 @@ TEE_Result TA_open_secret_key(TEE_ObjectHandle *secretKey)
 					sizeof(attrs)/sizeof(TEE_Attribute));
 			if (res != TEE_SUCCESS) {
 				EMSG("Failed to populate transient object, res = %x", res);
+				TEE_FreeTransientObject(masterKey);
+				masterKey = TEE_HANDLE_NULL;
 			}
 		} else {
 			EMSG("Failed to allocate transient object, res = %x", res);

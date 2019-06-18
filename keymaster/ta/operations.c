@@ -161,7 +161,6 @@ keymaster_error_t TA_try_start_operation(
 	for (uint32_t i = 0; i < KM_MAX_OPERATION; i++) {
 		if (operations[i].op_handle == UNDEFINED) {
 			TEE_GetSystemTime(&cur_t);
-			operations[i].op_handle = op_handle;
 			/* freed when operation aborted (TA_abort_operation) */
 			operations[i].key = TEE_Malloc(
 					sizeof(keymaster_key_blob_t),
@@ -206,6 +205,7 @@ keymaster_error_t TA_try_start_operation(
 			TEE_MemMove(operations[i].nonce.data,
 					nonce.data, nonce.data_length);
 			operations[i].nonce.data_length = nonce.data_length;
+			operations[i].op_handle = op_handle;
 			return KM_ERROR_OK;
 		}
 	}
