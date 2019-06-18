@@ -178,6 +178,7 @@ keymaster_error_t TA_try_start_operation(
 						TEE_MALLOC_FILL_ZERO);
 			if (!operations[i].key->key_material) {
 				EMSG("Failed to allocate memory for operation key data");
+				TEE_Free(operations[i].key);
 				return KM_ERROR_MEMORY_ALLOCATION_FAILED;
 			}
 			TEE_MemMove(operations[i].key->key_material,
@@ -198,6 +199,8 @@ keymaster_error_t TA_try_start_operation(
 						TEE_MALLOC_FILL_ZERO);
 			if (!operations[i].nonce.data) {
 				EMSG("Failed to allocate memory for nonce");
+				TEE_Free(operations[i].key->key_material);
+				TEE_Free(operations[i].key);
 				return KM_ERROR_MEMORY_ALLOCATION_FAILED;
 			}
 			TEE_MemMove(operations[i].nonce.data,
@@ -291,6 +294,7 @@ keymaster_error_t TA_store_sf_data(const keymaster_blob_t *input,
 						TEE_MALLOC_FILL_ZERO);
 	if (!new->data.data) {
 		EMSG("Failed to allocate memory for buffered sign/veify data");
+		TEE_Free(new);
 		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
 	}
 	TEE_MemMove(new->data.data, input->data, input->data_length);

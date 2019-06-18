@@ -600,6 +600,7 @@ TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle rsa_root_key,
 	res = mbedTLS_gen_root_cert(&issuer_key, rsa_root_cert, cert_root_subject_rsa);
 	if (res != TEE_SUCCESS ) {
 		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
+		TEE_Free(rsa_root_cert->data);
 		goto out;
 	}
 out:
@@ -637,6 +638,7 @@ TEE_Result mbedTLS_gen_root_cert_ecc(TEE_ObjectHandle ecc_root_key,
 	res = mbedTLS_gen_root_cert(&issuer_key, ecc_root_cert, cert_root_subject_ecc);
 	if (res != TEE_SUCCESS ) {
 		EMSG("mbedTLS_gen_root_cert: failed: %#x", res);
+		TEE_Free(ecc_root_cert->data);
 		goto out;
 	}
 out:
