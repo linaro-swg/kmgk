@@ -89,13 +89,16 @@ close:
 
 TEE_Result TA_create_secret_key(void)
 {
-	TEE_Result res = TEE_SUCCESS;
+	TEE_Result res;
 	TEE_ObjectHandle object = TEE_HANDLE_NULL;
 	uint8_t keyData[KEY_LENGTH];
-	static bool created = false;
 
 	DMSG("%s %d", __func__, __LINE__);
-	if (!created) {
+	res = TEE_OpenPersistentObject(TEE_STORAGE_PRIVATE,
+				objID, sizeof(objID),
+				TEE_DATA_FLAG_ACCESS_READ, &object);
+
+	if (res == TEE_ERROR_ITEM_NOT_FOUND) {
 		//No such key, create it
 		TEE_GenerateRandom(keyData, sizeof(keyData));
 		TEE_GenerateRandom((void *)iv, sizeof(iv));
@@ -122,16 +125,17 @@ TEE_Result TA_create_secret_key(void)
 			goto error;
 		}
 
-		TEE_CloseObject(object);
-		created = true;
-
 error:
-		if (res != TEE_SUCCESS) {
-			//Something wrong...
-			EMSG("Failed to create secret key, res=%x", res);
-			TEE_CloseAndDeletePersistentObject(object);
-		}
+		(res == TEE_SUCCESS) ?
+				TEE_CloseObject(object) :
+				TEE_CloseAndDeletePersistentObject(object);
 
+	} else if (res == TEE_SUCCESS) {
+		//Key already exits
+		TEE_CloseObject(object);
+	} else {
+		//Something wrong...
+		EMSG("Failed to open secret key, res=%x", res);
 	}
 
 	return res;
