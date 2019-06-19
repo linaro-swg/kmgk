@@ -17,7 +17,7 @@
 #define LOG_TAG "android.hardware.keymaster@3.0-service.optee"
 
 #include <android/hardware/keymaster/3.0/IKeymasterDevice.h>
-
+#include <cutils/properties.h>
 #include <hidl/HidlTransportSupport.h>
 #include <hidl/LegacySupport.h>
 #include <utils/Log.h>
@@ -52,6 +52,7 @@ int main() {
         ALOGE("Could not register service.");
         return 1;
     }
+    property_set("keymaster.optee.status", "ready");
     joinRpcThreadpool();
 
     return 0; // should never get here
