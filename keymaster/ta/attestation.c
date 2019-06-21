@@ -861,10 +861,13 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 	TEE_Result res = TEE_SUCCESS;
 	uint32_t actual_read = 0;
 	uint8_t* pBuf = NULL;
-	uint32_t nBufLen = 0;
+	size_t nBufLen = 0;
 
 	if ((buffer == NULL) || (buffSize == NULL))
 		return TEE_ERROR_BAD_PARAMETERS;
+
+	*buffer = NULL;
+	*buffSize = 0;
 
 	res = TEE_SeekObjectData(attObj, 0, TEE_DATA_SEEK_SET);
 	if (res != TEE_SUCCESS) {
