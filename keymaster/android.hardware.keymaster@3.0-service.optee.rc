@@ -1,4 +1,6 @@
 service vendor.keymaster-3-0-optee /vendor/bin/hw/android.hardware.keymaster@3.0-service.optee
+    interface android.hardware.keymaster@3.0::IKeymasterDevice optee
+    interface android.hardware.keymaster@3.0::IKeymasterDevice default
     class early_hal
     user system
     group system drmrpc shell

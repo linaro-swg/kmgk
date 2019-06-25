@@ -1,4 +1,6 @@
 service vendor.gatekeeper-1-0-optee /vendor/bin/hw/android.hardware.gatekeeper@1.0-service.optee
+    interface android.hardware.gatekeeper@1.0::IGatekeeper optee
+    interface android.hardware.gatekeeper@1.0::IGatekeeper default
     class hal
     user system
     group system shell
