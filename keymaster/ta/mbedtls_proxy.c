@@ -550,6 +550,9 @@ static TEE_Result mbedTLS_gen_root_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
+	DMSG("Generated certificate: \n");
+	DHEXDUMP(buf + blen - ret, ret);
+
 	if (root_cert->data_length < (uint32_t)ret)
 	{
 		res = TEE_ERROR_SHORT_BUFFER;
@@ -806,6 +809,9 @@ TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
 
     mbedtls_x509_crt_init( cert );
 
+	DMSG("root certificate: \n");
+	DHEXDUMP(p,cert_len);
+
     if( ( mbedtls_x509_crt_parse_der( cert,
                                             p, cert_len ) ) != 0 )
     {
@@ -870,6 +876,9 @@ TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
         return TEE_ERROR_OUT_OF_MEMORY;
 
     mbedtls_x509_crt_init( cert );
+
+	DMSG("root certificate: \n");
+	DHEXDUMP(p,cert_len);
 
     if( ( mbedtls_x509_crt_parse_der( cert,
                                             p, cert_len ) ) != 0 )
