@@ -92,6 +92,8 @@ static TEE_Result TA_GetClientIdentity(TEE_Identity *identity)
 {
 	TEE_Result res = TEE_SUCCESS;
 
+	// TODO: remove cast when OP-TEE changes name parameter type
+	// to const char *
 	res = TEE_GetPropertyAsIdentity(TEE_PROPSET_CURRENT_CLIENT,
 			(char *)"gpd.client.identity", identity);
 

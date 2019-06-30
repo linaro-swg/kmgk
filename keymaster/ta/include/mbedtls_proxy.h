@@ -20,6 +20,9 @@
 
 #include "ta_ca_defs.h"
 
+// TODO: have a comment here saying something about the RSA
+// algorithm/schema in use or if there are any limitations. I.e, a
+// general description of what kind of root cert it generates.
 TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle root_rsa_key,
 				      keymaster_blob_t *root_cert);
 

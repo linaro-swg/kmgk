@@ -416,6 +416,8 @@ static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 
 	rsa->len = mbedtls_mpi_size(&rsa->N);
 
+	//https://github.com/linaro-swg/kmgk/pull/3/commits/19f4163e47cbd96d5e98f9c315e88b3d51173ff9#r239748286
+	// TODO: blinding to mitigate against Bellcore attack
 	/* Deduce CRT */
 	mbedtls_mpi_sub_int(&K, &rsa->P, 1);
 	mbedtls_mpi_mod_mpi(&rsa->DP, &rsa->D, &K);
@@ -492,6 +494,7 @@ static TEE_Result mbedTLS_gen_root_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
+	// TODO: replace "19700101000000" with current time
 	ret = mbedtls_x509write_crt_set_validity(&crt, "19700101000000",
 						 "20301231235959");
 	if (ret) {
@@ -556,6 +559,7 @@ static TEE_Result mbedTLS_gen_root_cert(mbedtls_pk_context *issuer_key,
 	root_cert->data_length = ret;
 	TEE_MemMove(root_cert->data, buf + blen - ret,
 			ret);
+	// TODO: check root_cert->data
 
 out:
 	mbedtls_mpi_free(&serial);
@@ -694,6 +698,7 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
+	// TODO: replace "19700101000000" with current time
 	ret = mbedtls_x509write_crt_set_validity(&crt, "19700101000000",
 						 "20301231235959");
 	if (ret) {
@@ -769,6 +774,7 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 
 	TEE_MemMove(attest_cert->data, buf + blen - ret,
 			ret);
+	// TODO: check attest_cert->data
 
 out:
 	mbedtls_mpi_free(&serial);
