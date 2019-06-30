@@ -22,6 +22,7 @@
 #include <tee_internal_api_extensions.h>
 #include <utee_defines.h>
 
+#include "mbedtls_proxy.h"
 #include "ta_ca_defs.h"
 
 #define EMPTY_BLOB {.data = NULL, .data_length = 0}
@@ -91,21 +92,5 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 
 TEE_Result TA_generate_UniqueID(uint64_t T, uint8_t *appID,uint32_t appIDlen,
 		uint8_t R, uint8_t *uniqueID, uint32_t *uniqueIDlen);
-
-TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle root_rsa_key,
-				      keymaster_blob_t *root_cert);
-
-TEE_Result mbedTLS_gen_root_cert_ecc(TEE_ObjectHandle ecc_root_key,
-				     keymaster_blob_t *ecc_root_cert);
-
-TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
-						TEE_ObjectHandle rsa_attest_key,
-						keymaster_cert_chain_t *cert_chain,
-						keymaster_blob_t* attest_ext);
-
-TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
-					   	TEE_ObjectHandle ecc_attest_key,
-						keymaster_cert_chain_t *cert_chain,
-						keymaster_blob_t *attest_ext);
 
 #endif /* ATTESTATION_H_ */
