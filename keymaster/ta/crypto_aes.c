@@ -430,7 +430,7 @@ keymaster_error_t TA_aes_init_operation(uint32_t algorithm, uint32_t mode,
 	TEE_ObjectHandle trans_key;
 	TEE_Attribute attrs;
 
-	if ((keybuffer == NULL) || (op == NULL))
+	if (!keybuffer || !op)
 	{
 		goto out;
 	}

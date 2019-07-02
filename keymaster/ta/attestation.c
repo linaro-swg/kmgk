@@ -168,8 +168,8 @@ static TEE_Result TA_set_rsa_attest_key(TEE_TASessionHandle sessionSTA, keymaste
 {
 	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
 	TEE_ObjectHandle RSAobject = TEE_HANDLE_NULL;
-	TEE_Attribute	 	*attrs = NULL;
-	uint32_t			attrs_count = 0;
+	TEE_Attribute *attrs = NULL;
+	uint32_t attrs_count = 0;
 	uint64_t key_rsa_public_exponent = UNDEFINED;
 	uint32_t key_size = UNDEFINED;
 
@@ -201,7 +201,7 @@ static TEE_Result TA_set_rsa_attest_key(TEE_TASessionHandle sessionSTA, keymaste
 
 	for (uint32_t i = 0; i < attrs_count; i++) {
 		//Store RSA key in format: size | buffer attribute
-		DMSG("%s %d attrs[i].attributeID 0x%08X size %d", __func__, __LINE__,attrs[i].attributeID, attrs[i].content.ref.length);
+		DMSG("attrs[i].attributeID 0x%08X size %d",attrs[i].attributeID, attrs[i].content.ref.length);
 		result = TA_write_attest_obj_attr(RSAobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
 		if (result != TEE_SUCCESS) {
 			EMSG("Failed to write RSA attribute %x, res=%x",
@@ -234,8 +234,7 @@ static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster
 
 	if (TA_decode_pkcs8(sessionSTA, key_data, &attrs,
 			&attrs_count, KM_ALGORITHM_EC, &key_size,
-			&key_rsa_public_exponent) != KM_ERROR_OK)
-	{
+			&key_rsa_public_exponent) != KM_ERROR_OK) {
 		goto error_1;
 	}
 
@@ -257,7 +256,7 @@ static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster
 		goto error_2;
 	}
 
-	DMSG("%s %d curve 0x%08X", __func__, __LINE__,curve);
+	DMSG("curve 0x%08X", curve);
 	result = TEE_WriteObjectData(ECobject,
 			(void *)&curve, sizeof(uint32_t));
 	if (result != TEE_SUCCESS)

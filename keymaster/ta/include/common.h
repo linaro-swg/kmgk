@@ -51,8 +51,8 @@ enum keystore_command {
 /*
  * Provisioning API
 */
-    KM_SET_ATTESTATION_KEY				= 0x1000,
-    KM_APPEND_ATTESTATION_CERT_CHAIN	= 0x2000,
+	KM_SET_ATTESTATION_KEY				= 0x1000,
+	KM_APPEND_ATTESTATION_CERT_CHAIN	= 0x2000,
 /*
  * Please keep this constant consistent with KM_GET_AUTHTOKEN_KEY define that
  * is defined in Gatekeeper
