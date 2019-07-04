@@ -20,6 +20,7 @@
 #define LOG_TAG "OpteeIPC"
 #include <utils/Log.h>
 
+#include <gatekeeper_ipc.h>
 #include "optee_ipc.h"
 
 #undef LOG_TAG
@@ -103,8 +104,12 @@ bool OpteeIPC::call(uint32_t cmd,
     uint32_t err_origin;
     TEEC_Result res = TEEC_InvokeCommand(&sess, cmd, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-        ALOGE("TEEC_InvokeCommand cmd %u command failed with "
-                "code 0x%x origin 0x%x", cmd, res, err_origin);
+	ALOGE("TEEC_InvokeCommand failed with code 0x%08x origin 0x%08x",
+		res, err_origin);
+	if (res == TEEC_ERROR_TARGET_DEAD) {
+		disconnect();
+		connect(TA_GATEKEEPER_UUID);
+	}
         return false;
     }
 
