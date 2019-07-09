@@ -864,17 +864,22 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 		//TODO TA_generate_UniqueID(...);
 	}
 
+	//Read Root attestation certificate (must be generated and stored before)
+	res = TA_read_root_attest_cert(key_type, &cert_chain);
+	if (res != KM_ERROR_INSUFFICIENT_BUFFER_SPACE) {
+		EMSG("Failed to get att cert chain len, res=%x", res);
+		goto exit;
+	}
+
 	//Allocate memory for chain of certificates
-	//NOTE: current impl support only 2 certificates in chain
 	cert_chain.entries = TEE_Malloc(
-			sizeof(keymaster_blob_t)*ATT_CERT_CHAIN_LEN,
+			sizeof(keymaster_blob_t)*cert_chain.entry_count,
 			TEE_MALLOC_FILL_ZERO);
 	if (!cert_chain.entries) {
 		EMSG("Failed to allocate memory for chain of certificates");
 		res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
 		goto exit;
 	}
-	cert_chain.entry_count = ATT_CERT_CHAIN_LEN;
 
 	//Read Root attestation certificate (must be generated and stored before)
 	res = TA_read_root_attest_cert(key_type, &cert_chain);
@@ -890,6 +895,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Failed to gen key att cert, res=%x", res);
 		goto exit;
 	}
+
 	//Check output buffer length
 	if (TA_cert_chain_size(&cert_chain) > out_size) {
 		EMSG("Short output buffer for chain of certificates");

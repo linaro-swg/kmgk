@@ -47,7 +47,6 @@
 
 #define UNIQUE_ID_BUFFER_SIZE 16U
 
-#define ATT_CERT_CHAIN_LEN 2U
 #define ROOT_ATT_CERT_INDEX 1U
 #define KEY_ATT_CERT_INDEX 0U
 
@@ -69,7 +68,7 @@ keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param
 keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS]);
 #endif
 
-TEE_Result TA_read_root_attest_cert(uint32_t type,
+keymaster_error_t TA_read_root_attest_cert(uint32_t type,
 		keymaster_cert_chain_t *cert_chain);
 TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA,
 		uint32_t type, TEE_ObjectHandle attestedKey,
@@ -88,7 +87,7 @@ TEE_Result TA_write_attest_obj_attr(TEE_ObjectHandle attObj,
 TEE_Result TA_write_attest_cert(TEE_ObjectHandle attObj,
 		const uint8_t *buffer, const size_t buffSize);
 TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
-		uint8_t **buffer, size_t *buffSize);
+						keymaster_cert_chain_t *cert_chain);
 
 TEE_Result TA_generate_UniqueID(uint64_t T, uint8_t *appID,uint32_t appIDlen,
 		uint8_t R, uint8_t *uniqueID, uint32_t *uniqueIDlen);
