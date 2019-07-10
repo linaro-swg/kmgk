@@ -31,11 +31,13 @@ TEE_Result mbedTLS_gen_root_cert_ecc(TEE_ObjectHandle ecc_root_key,
 
 TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
 						TEE_ObjectHandle rsa_attest_key,
+						unsigned int key_usage,
 						keymaster_cert_chain_t *cert_chain,
 						keymaster_blob_t* attest_ext);
 
 TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
 						TEE_ObjectHandle ecc_attest_key,
+						unsigned int key_usage,
 						keymaster_cert_chain_t *cert_chain,
 						keymaster_blob_t *attest_ext);
 
