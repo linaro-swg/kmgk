@@ -175,12 +175,14 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 		}
 
 		for (uint32_t i = 0; i < (KM_ATTR_COUNT_EC - 1); i++) {
+			key_attr_buf_size = EC_MAX_KEY_BUFFER_SIZE;
+
 			res = TEE_GetObjectBufferAttribute(key_obj,
 							   attr_ids[i],
 							   key_attr_buf,
 							   &key_attr_buf_size);
 			if (res != TEE_SUCCESS) {
-				EMSG("Failed to get attribute %d, res=%x", i, res);
+				EMSG("Failed to get attribute %d size %d, res=%x", i, key_attr_buf_size, res);
 				goto out;
 			}
 
@@ -382,10 +384,17 @@ static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 		/* User transient object API */
 
 		for (uint32_t i = 0; i < KM_ATTR_COUNT_RSA; i++) {
+
+			key_attr_buf_size = RSA_MAX_KEY_BUFFER_SIZE;
 			res = TEE_GetObjectBufferAttribute(key_obj,
 							   attr_ids[i],
 							   key_attr_buf,
 							   &key_attr_buf_size);
+			if (res != TEE_SUCCESS)
+			{
+				EMSG("Failed to get attribute %d size %d, res=%x", i, key_attr_buf_size, res);
+				goto out;
+			}
 
 			/* provide sane value */
 			mbedtls_mpi_init(&attrs[i]);
@@ -798,8 +807,8 @@ TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
 	int ret;
 	TEE_Result res = TEE_SUCCESS;
 	keymaster_blob_t *rsa_attest_cert = &cert_chain->entries[KEY_ATT_CERT_INDEX];
-	mbedtls_pk_context issuer_key = {0};
-	mbedtls_pk_context subject_key = {0};
+	mbedtls_pk_context issuer_key = {NULL,NULL};
+	mbedtls_pk_context subject_key = {NULL,NULL};
 	mbedtls_x509_crt *cert = NULL;
    	char cert_subject_rsa[1024];
     const unsigned char *p = (unsigned char*)cert_chain->entries[ROOT_ATT_CERT_INDEX].data;
@@ -867,8 +876,8 @@ TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
 	int ret;
 	TEE_Result res = TEE_SUCCESS;
 	keymaster_blob_t *ecc_attest_cert = &cert_chain->entries[KEY_ATT_CERT_INDEX];
-	mbedtls_pk_context issuer_key = {0};
-	mbedtls_pk_context subject_key = {0};
+	mbedtls_pk_context issuer_key = {NULL,NULL};
+	mbedtls_pk_context subject_key = {NULL,NULL};
 	mbedtls_x509_crt *cert = NULL;
    	char cert_subject_ecc[1024];
     const unsigned char *p = (unsigned char*)cert_chain->entries[ROOT_ATT_CERT_INDEX].data;
