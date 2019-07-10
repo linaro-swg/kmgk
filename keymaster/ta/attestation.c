@@ -757,7 +757,6 @@ error_1:
 		default:
 			return KM_ERROR_UNKNOWN_ERROR;
 	}
-	return res;
 }
 
 TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA, uint32_t type,
@@ -868,6 +867,10 @@ static unsigned long fetch_length(const unsigned char *in, unsigned long inlen)
    unsigned long x, z;
 
    unsigned long data_offset = 0;
+
+   if (in == NULL) {
+      return 0xFFFFFFFF;
+   }
 
    /* skip type and read len */
    if (inlen < 2) {

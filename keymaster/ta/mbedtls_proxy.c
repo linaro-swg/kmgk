@@ -649,6 +649,7 @@ out:
 
 static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 					  mbedtls_pk_context *subject_key,
+					  unsigned int key_usage,
 					  keymaster_blob_t *attest_cert,
 					  keymaster_blob_t *attest_ext,
 					  char *cert_issuer)
@@ -736,8 +737,7 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 	}
 
 	ret = mbedtls_x509write_crt_set_key_usage(&crt,
-					    MBEDTLS_X509_KU_DIGITAL_SIGNATURE |
-					    MBEDTLS_X509_KU_KEY_CERT_SIGN);
+					    key_usage);
 	if (ret) {
 		EMSG("mbedtls_x509write_crt_set_key_usage: failed: -%#x",
 				-ret);
@@ -790,6 +790,7 @@ out:
 
 TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
 						TEE_ObjectHandle rsa_attest_key,
+						unsigned int key_usage,
 						keymaster_cert_chain_t *cert_chain,
 						keymaster_blob_t *attest_ext)
 {
@@ -842,7 +843,7 @@ TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
 	}
 
 	res = mbedTLS_attest_key_cert(&issuer_key, &subject_key,
-				rsa_attest_cert, attest_ext, cert_subject_rsa );
+				key_usage,rsa_attest_cert, attest_ext, cert_subject_rsa );
 	if (res) {
 		EMSG("mbedTLS_attest_key_cert: failed: %#x", res);
 		goto out;
@@ -858,6 +859,7 @@ out:
 
 TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
 					   	TEE_ObjectHandle ecc_attest_key,
+						unsigned int key_usage,
 						keymaster_cert_chain_t *cert_chain,
 						keymaster_blob_t *attest_ext)
 {
@@ -910,7 +912,7 @@ TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
 	}
 
 	res = mbedTLS_attest_key_cert(&issuer_key, &subject_key,
-				ecc_attest_cert, attest_ext, cert_subject_ecc );
+				key_usage,ecc_attest_cert, attest_ext, cert_subject_ecc );
 	if (res) {
 		EMSG("mbedTLS_attest_key_cert: failed: %#x", res);
 		goto out;
