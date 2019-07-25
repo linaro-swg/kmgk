@@ -486,7 +486,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	in += TA_deserialize_key_format(in, in_end, &key_format, &res);
 	if (res != KM_ERROR_OK)
 		goto out;
-	in += TA_deserialize_blob(in, in_end, &key_data, false, &res, false);
+	in += TA_deserialize_blob_akms(in, in_end, &key_data, false, &res, false);
 	if (res != KM_ERROR_OK)
 		goto out;
 
