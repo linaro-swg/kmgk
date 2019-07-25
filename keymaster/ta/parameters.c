@@ -385,7 +385,7 @@ keymaster_error_t TA_fill_characteristics(
 inline uint32_t TA_blob_size(const keymaster_blob_t *blob)
 {
 	DMSG("%s %d", __func__, __LINE__);
-	return BLOB_SIZE(blob);
+	return BLOB_SIZE_AKMS(blob);
 }
 
 uint32_t TA_characteristics_size(
