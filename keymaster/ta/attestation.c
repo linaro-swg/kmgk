@@ -1102,7 +1102,7 @@ keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param
 	}
 	TEE_MemMove(&algorithm, in, sizeof(algorithm));
 	in += sizeof(algorithm);
-	TA_deserialize_blob(in, in_end, &input, false, &res, true);
+	TA_deserialize_blob_akms(in, in_end, &input, false, &res, true);
 	if (res != KM_ERROR_OK)
 		goto out;
 
@@ -1157,7 +1157,7 @@ keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS])
 	}
 	TEE_MemMove(&algorithm, in, sizeof(algorithm));
 	in += sizeof(algorithm);
-	TA_deserialize_blob(in, in_end, &input, false, &res, true);
+	TA_deserialize_blob_akms(in, in_end, &input, false, &res, true);
 	if (res != KM_ERROR_OK)
 		goto out;
 
