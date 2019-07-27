@@ -60,7 +60,7 @@ keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
 				keymaster_padding_t *padding,
 				uint32_t *mac_length,
 				keymaster_blob_t *nonce, uint32_t *min_sec,
-				bool *do_auth);
+				bool *do_auth, uint8_t *key_id);
 
 void TA_push_param(keymaster_key_param_set_t *params,
 			const keymaster_key_param_t *param);

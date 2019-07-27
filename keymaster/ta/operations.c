@@ -42,8 +42,7 @@ keymaster_error_t TA_abort_operation(
 		if (op_handle == operations[i].op_handle) {
 			res = KM_ERROR_OK;
 			if (operations[i].min_sec != UNDEFINED) {
-				TA_trigger_timer(operations[i].key,
-						operations[i].min_sec);
+				TA_trigger_timer(operations[i].key_id);
 			}
 			operations[i].op_handle = UNDEFINED;
 			if (operations[i].key != NULL) {
@@ -88,6 +87,7 @@ keymaster_error_t TA_abort_operation(
 				TEE_Free(operations[i].last_block.data);
 			operations[i].last_block.data = NULL;
 			operations[i].last_block.data_length = 0;
+			TEE_MemFill(operations[i].key_id, 0, sizeof(operations[i].key_id));
 			break;
 		}
 	}
@@ -121,6 +121,7 @@ void TA_reset_operations_table(void)
 		operations[i].last_block.data_length = 0;
 		operations[i].first = true;
 		operations[i].padded = false;
+		TEE_MemFill(operations[i].key_id, 0, sizeof(operations[i].key_id));
 	}
 }
 
@@ -154,7 +155,8 @@ keymaster_error_t TA_try_start_operation(
 				const keymaster_block_mode_t mode,
 				const uint32_t mac_length,
 				const keymaster_digest_t digest,
-				const keymaster_blob_t nonce)
+				const keymaster_blob_t nonce,
+				uint8_t *key_id)
 {
 	TEE_Time cur_t;
 
@@ -206,6 +208,8 @@ keymaster_error_t TA_try_start_operation(
 					nonce.data, nonce.data_length);
 			operations[i].nonce.data_length = nonce.data_length;
 			operations[i].op_handle = op_handle;
+			memcpy(operations[i].key_id, key_id,
+					sizeof(operations[i].key_id));
 			return KM_ERROR_OK;
 		}
 	}
@@ -223,13 +227,15 @@ keymaster_error_t TA_start_operation(
 				const keymaster_block_mode_t mode,
 				const uint32_t mac_length,
 				const keymaster_digest_t digest,
-				const keymaster_blob_t nonce)
+				const keymaster_blob_t nonce,
+				uint8_t *key_id)
 {
 	keymaster_error_t res = TA_try_start_operation(op_handle, key, min_sec,
 							operation, purpose,
 							digest_op, do_auth,
 							padding, mode,
-							mac_length, digest, nonce);
+							mac_length, digest,
+							nonce, key_id);
 	if (res != KM_ERROR_OK) {
 		res = TA_kill_old_operation();
 		if (res == KM_ERROR_OK) {
@@ -237,7 +243,8 @@ keymaster_error_t TA_start_operation(
 							operation, purpose,
 							digest_op, do_auth,
 							padding, mode,
-							mac_length, digest, nonce);
+							mac_length, digest,
+							nonce, key_id);
 		}
 	}
 	return res;

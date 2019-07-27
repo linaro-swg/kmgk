@@ -19,7 +19,7 @@
 #define ANDROID_OPTEE_TABLES_H
 
 #define KM_MAX_USE_COUNTERS 20U
-#define KM_MAX_USE_TIMERS 30U
+#define KM_MAX_USE_TIMERS 32U
 #define UNDEFINED UINT32_MAX
 
 #include <tee_internal_api.h>
@@ -27,6 +27,7 @@
 #include <utee_defines.h>
 
 #include "ta_ca_defs.h"
+#include "master_crypto.h"
 
 typedef struct {
 	keymaster_key_blob_t key;
@@ -34,7 +35,7 @@ typedef struct {
 } keymaster_use_counter_t;
 
 typedef struct {
-	keymaster_key_blob_t key;
+	uint8_t key_id[TAG_LENGTH];
 	TEE_Time last_access;
 	uint32_t min_sec;
 } keymaster_use_timer_t;
@@ -42,12 +43,9 @@ typedef struct {
 keymaster_error_t TA_count_key_uses(const keymaster_key_blob_t key,
 				const uint32_t max_uses);
 
-void TA_clean_timers(void);
+keymaster_error_t TA_trigger_timer(uint8_t *key_id);
 
-keymaster_error_t TA_trigger_timer(const keymaster_key_blob_t *key,
-				const uint32_t min_sec);
-
-keymaster_error_t TA_check_key_use_timer(const keymaster_key_blob_t *key,
+keymaster_error_t TA_check_key_use_timer(uint8_t *key_id,
 				const uint32_t min_sec);
 
 #endif/* ANDROID_OPTEE_TABLES_H */
