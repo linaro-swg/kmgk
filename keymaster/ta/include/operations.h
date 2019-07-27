@@ -26,6 +26,7 @@
 
 #include "ta_ca_defs.h"
 #include "tables.h"
+#include "master_crypto.h"
 
 typedef struct keymaster_blob_list_item_t {
 	keymaster_blob_t data;
@@ -33,6 +34,7 @@ typedef struct keymaster_blob_list_item_t {
 } keymaster_blob_list_item_t;
 
 typedef struct {
+	uint8_t key_id[TAG_LENGTH];
 	keymaster_key_blob_t *key;
 	keymaster_blob_t nonce;
 	keymaster_blob_t last_block;
@@ -71,7 +73,8 @@ keymaster_error_t TA_try_start_operation(
 				const keymaster_block_mode_t mode,
 				const uint32_t mac_length,
 				const keymaster_digest_t digest,
-				const keymaster_blob_t nonce);
+				const keymaster_blob_t nonce,
+				uint8_t *key_id);
 
 keymaster_error_t TA_start_operation(
 				const keymaster_operation_handle_t op_handle,
@@ -85,7 +88,8 @@ keymaster_error_t TA_start_operation(
 				const keymaster_block_mode_t mode,
 				const uint32_t mac_length,
 				const keymaster_digest_t digest,
-				const keymaster_blob_t nonce);
+				const keymaster_blob_t nonce,
+				uint8_t *key_id);
 
 keymaster_error_t TA_get_operation(const keymaster_operation_handle_t op_handle,
 				keymaster_operation_t *operation);

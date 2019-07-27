@@ -1035,6 +1035,7 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	TEE_ObjectHandle obj_h = TEE_HANDLE_NULL;
 	TEE_OperationHandle *operation = TEE_HANDLE_NULL;
 	TEE_OperationHandle *digest_op = TEE_HANDLE_NULL;
+	uint8_t key_id[TAG_LENGTH];
 
 	DMSG("%s %d", __func__, __LINE__);
 	in = (uint8_t *) params[0].memref.buffer;
@@ -1070,6 +1071,10 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	if (res != KM_ERROR_OK)
 		goto out;
 	key_material = TEE_Malloc(key.key_material_size, TEE_MALLOC_FILL_ZERO);
+
+	memcpy(key_id, key.key_material + key.key_material_size - TAG_LENGTH,
+		TAG_LENGTH);
+
 	res = TA_restore_key(key_material, &key, &key_size,
 						 &type, &obj_h, &params_t);
 	if (res != KM_ERROR_OK)
@@ -1090,7 +1095,7 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	res = TA_check_params(&key, &params_t, &in_params,
 				&algorithm, purpose, &digest, &mode,
 				&padding, &mac_length, &nonce,
-				&min_sec, &do_auth);
+				&min_sec, &do_auth, key_id);
 	if (res != KM_ERROR_OK)
 		goto out;
 	if (algorithm == KM_ALGORITHM_AES && mode !=
@@ -1138,7 +1143,8 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	}
 	res = TA_start_operation(operation_handle, key, min_sec,
 					operation, purpose, digest_op, do_auth,
-					padding, mode, mac_length, digest, nonce);
+					padding, mode, mac_length, digest,
+					nonce, key_id);
 	if (res != KM_ERROR_OK)
 		goto out;
 

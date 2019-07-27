@@ -581,7 +581,8 @@ keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
 				keymaster_padding_t *op_padding,
 				uint32_t *mac_length,
 				keymaster_blob_t *nonce,
-				uint32_t *min_sec, bool *do_auth)
+				uint32_t *min_sec, bool *do_auth,
+				uint8_t *key_id)
 {
 	hw_auth_token_t auth_token;
 	hw_authenticator_type_t auth_type = HW_AUTH_NONE;
@@ -1038,7 +1039,7 @@ keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
 		}
 	}
 	if (*min_sec != UNDEFINED) {
-		res = TA_check_key_use_timer(key, *min_sec);
+		res = TA_check_key_use_timer(key_id, *min_sec);
 		if (res != KM_ERROR_OK)
 			goto out_cp;
 	}
