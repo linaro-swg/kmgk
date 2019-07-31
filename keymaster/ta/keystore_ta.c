@@ -1080,7 +1080,7 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	key_material = TEE_Malloc(key.key_material_size, TEE_MALLOC_FILL_ZERO);
 
 	memcpy(key_id, key.key_material + key.key_material_size - TAG_LENGTH,
-		TAG_LENGTH);
+	       TAG_LENGTH);
 
 	res = TA_restore_key(key_material, &key, &key_size,
 						 &type, &obj_h, &params_t);
@@ -1099,7 +1099,7 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	default:/* HMAC */
 		algorithm = KM_ALGORITHM_HMAC;
 	}
-	res = TA_check_params(&key, &params_t, &in_params,
+	res = TA_check_params(&params_t, &in_params,
 				&algorithm, purpose, &digest, &mode,
 				&padding, &mac_length, &nonce,
 				&min_sec, &do_auth, key_id);
@@ -1150,9 +1150,9 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 			goto out;
 	}
 	res = TA_start_operation(operation_handle, key, min_sec,
-					operation, purpose, digest_op, do_auth,
-					padding, mode, mac_length, digest,
-					nonce, key_id);
+				 operation, purpose, digest_op, do_auth,
+				 padding, mode, mac_length, digest,
+				 nonce, key_id);
 	if (res != KM_ERROR_OK)
 		goto out;
 

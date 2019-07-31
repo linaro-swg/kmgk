@@ -50,8 +50,7 @@ keymaster_error_t TA_check_permission(const keymaster_key_param_set_t *params,
 				const keymaster_blob_t app_data,
 				bool *exportable);
 
-keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
-				const keymaster_key_param_set_t *key_params,
+keymaster_error_t TA_check_params(const keymaster_key_param_set_t *key_params,
 				const keymaster_key_param_set_t *in_params,
 				keymaster_algorithm_t *algorithm,
 				const keymaster_purpose_t op_purpose,

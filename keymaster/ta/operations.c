@@ -87,7 +87,8 @@ keymaster_error_t TA_abort_operation(
 				TEE_Free(operations[i].last_block.data);
 			operations[i].last_block.data = NULL;
 			operations[i].last_block.data_length = 0;
-			TEE_MemFill(operations[i].key_id, 0, sizeof(operations[i].key_id));
+			TEE_MemFill(operations[i].key_id, 0,
+				    sizeof(operations[i].key_id));
 			break;
 		}
 	}
@@ -121,7 +122,8 @@ void TA_reset_operations_table(void)
 		operations[i].last_block.data_length = 0;
 		operations[i].first = true;
 		operations[i].padded = false;
-		TEE_MemFill(operations[i].key_id, 0, sizeof(operations[i].key_id));
+		TEE_MemFill(operations[i].key_id, 0,
+			    sizeof(operations[i].key_id));
 	}
 }
 
@@ -231,20 +233,20 @@ keymaster_error_t TA_start_operation(
 				uint8_t *key_id)
 {
 	keymaster_error_t res = TA_try_start_operation(op_handle, key, min_sec,
-							operation, purpose,
-							digest_op, do_auth,
-							padding, mode,
-							mac_length, digest,
-							nonce, key_id);
+						       operation, purpose,
+						       digest_op, do_auth,
+						       padding, mode,
+						       mac_length, digest,
+						       nonce, key_id);
 	if (res != KM_ERROR_OK) {
 		res = TA_kill_old_operation();
 		if (res == KM_ERROR_OK) {
 			res = TA_try_start_operation(op_handle, key, min_sec,
-							operation, purpose,
-							digest_op, do_auth,
-							padding, mode,
-							mac_length, digest,
-							nonce, key_id);
+						     operation, purpose,
+						     digest_op, do_auth,
+						     padding, mode,
+						     mac_length, digest,
+						     nonce, key_id);
 		}
 	}
 	return res;

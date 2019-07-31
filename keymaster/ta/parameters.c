@@ -571,8 +571,7 @@ bool cmpBlobParam(const keymaster_blob_t blob,
 		blob.data_length);
 }
 
-keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
-				const keymaster_key_param_set_t *key_params,
+keymaster_error_t TA_check_params(const keymaster_key_param_set_t *key_params,
 				const keymaster_key_param_set_t *in_params,
 				keymaster_algorithm_t *algorithm,
 				const keymaster_purpose_t op_purpose,
@@ -1044,7 +1043,7 @@ keymaster_error_t TA_check_params(keymaster_key_blob_t *key,
 			goto out_cp;
 	}
 	if (max_uses != UNDEFINED) {
-		res = TA_count_key_uses(*key, max_uses);
+		res = TA_count_key_uses(key_id, max_uses);
 		if (res != KM_ERROR_OK)
 			goto out_cp;
 	}
