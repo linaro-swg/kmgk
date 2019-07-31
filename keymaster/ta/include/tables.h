@@ -30,7 +30,7 @@
 #include "master_crypto.h"
 
 typedef struct {
-	keymaster_key_blob_t key;
+	uint8_t key_id[TAG_LENGTH];
 	uint32_t count;
 } keymaster_use_counter_t;
 
@@ -40,7 +40,7 @@ typedef struct {
 	uint32_t min_sec;
 } keymaster_use_timer_t;
 
-keymaster_error_t TA_count_key_uses(const keymaster_key_blob_t key,
+keymaster_error_t TA_count_key_uses(uint8_t *key_id,
 				const uint32_t max_uses);
 
 keymaster_error_t TA_trigger_timer(uint8_t *key_id);
