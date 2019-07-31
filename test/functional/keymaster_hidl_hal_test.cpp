@@ -41,6 +41,9 @@
 #include "openssl_utils.h"
 
 #define KM_MAX_USE_TIMERS 32U
+#define KM_MAX_USE_COUNTERS 20U
+
+#define ARR_SIZE(a) (sizeof(a)/sizeof(a[0]))
 
 using ::android::sp;
 using ::std::string;
@@ -458,7 +461,7 @@ class KeymasterTest : public ::testing::VtsHalHidlTargetTestBase {
                             error = hidl_error;
                             *out_params = hidl_out_params;
                             *op_handle = hidl_op_handle;
-                        })
+			})
                 .isOk());
         if (error != ErrorCode::OK) {
             // Some implementations may modify *op_handle on error.
@@ -530,7 +533,7 @@ class KeymasterTest : public ::testing::VtsHalHidlTargetTestBase {
     }
 
 private:
-     static sp<IKeymasterDevice> keymaster_;
+    static sp<IKeymasterDevice> keymaster_;
 };
 
 sp<IKeymasterDevice> KeymasterTest::keymaster_;
@@ -539,53 +542,53 @@ class KeymasterTagTest : public KeymasterTest {
 public:
 
     /* Make a default signing operation with Ecdsa key using default operation
-       parameters and default message*/
+       parameters and default message.*/
     ErrorCode DefaultEcdsaSigningOperation(const HidlBuf& key_blob) {
-	string message(24, 'a');
-	string signature;
-	AuthorizationSet in_params = AuthorizationSetBuilder().Digest(Digest::NONE);
-	AuthorizationSet out_params;
-	OperationHandle op_handle;
+        string message(24, 'a');
+        string signature;
+        AuthorizationSet in_params = AuthorizationSetBuilder().Digest(Digest::NONE);
+        AuthorizationSet out_params;
+        OperationHandle op_handle;
 
-	ErrorCode ret = Begin(KeyPurpose::SIGN, key_blob, in_params,
-			      &out_params, &op_handle);
+        ErrorCode ret = Begin(KeyPurpose::SIGN, key_blob, in_params,
+                              &out_params, &op_handle);
 
-	if (ret != ErrorCode::OK) return ret;
+        if (ret != ErrorCode::OK) return ret;
 
-	ret = Finish(op_handle, AuthorizationSet(), message, signature, &out_params,
-		     &signature);
+        ret = Finish(op_handle, AuthorizationSet(), message, signature, &out_params,
+                     &signature);
 
-	if (ret != ErrorCode::OK) return ret;
+        if (ret != ErrorCode::OK) return ret;
 
-	if (!out_params.empty())
-	    ret = ErrorCode:: UNKNOWN_ERROR;
+        if (!out_params.empty())
+            ret = ErrorCode:: UNKNOWN_ERROR;
 
-	return ret;
+        return ret;
     }
 };
 
 TEST_F(KeymasterTagTest, tag_MIN_SECONDS_BETWEEN_OPS) {
-    HidlBuf key_blobs[KM_MAX_USE_TIMERS+1];
-    KeyCharacteristics key_characteristics[KM_MAX_USE_TIMERS+1];
+    HidlBuf key_blobs[KM_MAX_USE_TIMERS + 1];
+    KeyCharacteristics key_characteristics[KM_MAX_USE_TIMERS + 1];
     unsigned int seconds = 100;
 
-    for (unsigned int i = 0; i < sizeof(key_blobs)/sizeof(key_blobs[0]); i++) {
-        ASSERT_EQ(
+    for (unsigned int i = 0; i < ARR_SIZE(key_blobs); i++) {
+         ASSERT_EQ(
             ErrorCode::OK,
             GenerateKey(AuthorizationSetBuilder()
                             .EcdsaSigningKey(256)
                             .Digest(Digest::NONE)
                             .Authorization(TAG_NO_AUTH_REQUIRED)
-			    .Authorization(TAG_MIN_SECONDS_BETWEEN_OPS, seconds),
+                            .Authorization(TAG_MIN_SECONDS_BETWEEN_OPS, seconds),
                         &key_blobs[i], &key_characteristics[i]));
     }
 
-    for (unsigned int i = 0; i < sizeof(key_blobs)/sizeof(key_blobs[0]) - 1; i++) {
-	ASSERT_EQ(ErrorCode::OK, DefaultEcdsaSigningOperation(key_blobs[i]));
-	ASSERT_EQ(ErrorCode::KEY_RATE_LIMIT_EXCEEDED, DefaultEcdsaSigningOperation(key_blobs[i]));
+    for (unsigned int i = 0; i < ARR_SIZE(key_blobs) - 1; i++) {
+        ASSERT_EQ(ErrorCode::OK, DefaultEcdsaSigningOperation(key_blobs[i]));
+        ASSERT_EQ(ErrorCode::KEY_RATE_LIMIT_EXCEEDED, DefaultEcdsaSigningOperation(key_blobs[i]));
     }
 
-     ASSERT_EQ(ErrorCode::TOO_MANY_OPERATIONS, DefaultEcdsaSigningOperation(key_blobs[KM_MAX_USE_TIMERS]));
+    ASSERT_EQ(ErrorCode::TOO_MANY_OPERATIONS, DefaultEcdsaSigningOperation(key_blobs[KM_MAX_USE_TIMERS]));
 
     /* Sleep for seconds - waiting TAG_MIN_SECONDS_BETWEEN_OPS seconds for our tables to get cleaned */
     std::cout<<"Sleeping for " << seconds << " seconds\n";
@@ -593,6 +596,38 @@ TEST_F(KeymasterTagTest, tag_MIN_SECONDS_BETWEEN_OPS) {
 
     ASSERT_EQ(ErrorCode::OK, DefaultEcdsaSigningOperation(key_blobs[0]));
     ASSERT_EQ(ErrorCode::KEY_RATE_LIMIT_EXCEEDED, DefaultEcdsaSigningOperation(key_blobs[0]));
+}
+
+/**
+ * This test requires TA restart after finish if keys with tag MAX_USES_PER_BOOT
+ * are expected.
+ */
+TEST_F(KeymasterTagTest, tag_MAX_USES_PER_BOOT) {
+    HidlBuf key_blobs[KM_MAX_USE_COUNTERS + 1];
+    KeyCharacteristics key_characteristics[KM_MAX_USE_COUNTERS + 1];
+    unsigned int max_uses = 5;
+
+    for (unsigned int i = 0; i < ARR_SIZE(key_blobs); i++) {
+        ASSERT_EQ(
+            ErrorCode::OK,
+            GenerateKey(AuthorizationSetBuilder()
+                            .EcdsaSigningKey(256)
+                            .Digest(Digest::NONE)
+                            .Authorization(TAG_NO_AUTH_REQUIRED)
+                            .Authorization(TAG_MAX_USES_PER_BOOT, max_uses),
+                        &key_blobs[i], &key_characteristics[i]));
+    }
+
+    for (unsigned int i = 0; i < ARR_SIZE(key_blobs) - 1; i++) {
+        for (unsigned int j = 0; j < max_uses; j++)
+            ASSERT_EQ(ErrorCode::OK, DefaultEcdsaSigningOperation(key_blobs[i])) <<
+                "Expecting that key #" << i + 1 << " can be used for " << j + 1 << " times\n";
+
+        ASSERT_EQ(ErrorCode::KEY_MAX_OPS_EXCEEDED, DefaultEcdsaSigningOperation(key_blobs[i])) <<
+            "Expecting that key #" << i << "can not be used for " << max_uses + 1 << " times\n";
+    }
+
+    ASSERT_EQ(ErrorCode::TOO_MANY_OPERATIONS, DefaultEcdsaSigningOperation(key_blobs[KM_MAX_USE_COUNTERS]));
 }
 
 int main(int argc, char** argv) {
