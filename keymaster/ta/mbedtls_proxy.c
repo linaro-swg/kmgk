@@ -12,11 +12,13 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/md5.h>
 #include <mbedtls/rsa.h>
+#include <mbedtls/ecdsa.h>
 #include <mbedtls/sha1.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/x509_crt.h>
 #include <mbedtls/x509_csr.h>
 #include <mbedtls/x509.h>
+#include <mbedtls/pk.h>
 
 
 #define CERT_ROOT_ORG "Android"
@@ -44,6 +46,192 @@ static int f_rng(void *rng __unused, unsigned char *output, size_t output_len)
 {
 	TEE_GenerateRandom(output, output_len);
 	return 0;
+}
+
+static int mpi_to_att(TEE_Attribute *att, const mbedtls_mpi *mpi,
+		      uint32_t tag) {
+	uint32_t length = (uint32_t)mbedtls_mpi_size(mpi);
+	uint8_t *buf = TEE_Malloc(length, TEE_MALLOC_FILL_ZERO);
+	if (!buf) {
+		EMSG("Failed to allocate memory");
+		return -1;
+	}
+
+	if (mbedtls_mpi_write_binary(mpi, buf, length)) {
+		EMSG ("Failed to write mpi to buffer");
+		TEE_Free(buf);
+		return -1;
+	}
+
+	TEE_InitRefAttribute(att, tag, buf, length);
+
+	return 0;
+}
+/* Structure for conversion from mbedtls_mpi to TEE_Attribute */
+struct mpi_id {
+	uint32_t att_id;
+	mbedtls_mpi *mpi;
+};
+
+/* Convert mbedtls_rsa_context* to TEE_Attributes array */
+static keymaster_error_t mbedtls_export_rsa(TEE_Attribute **attrs,
+					    uint32_t *attrs_count,
+					    uint32_t *key_size,
+					    mbedtls_pk_context *context) {
+	mbedtls_rsa_context *ctx = context->pk_ctx;
+	uint32_t max_attrs = KM_ATTR_COUNT_RSA, count = 0;
+	keymaster_error_t ret = KM_ERROR_UNKNOWN_ERROR;
+	struct mpi_id mpis[KM_ATTR_COUNT_RSA] = {
+		{ TEE_ATTR_RSA_MODULUS, &ctx->N },
+		{ TEE_ATTR_RSA_PUBLIC_EXPONENT, &ctx->E},
+		{ TEE_ATTR_RSA_PRIVATE_EXPONENT, &ctx->D},
+		{ TEE_ATTR_RSA_PRIME1, &ctx->P },
+		{ TEE_ATTR_RSA_PRIME2, &ctx->Q },
+		{ TEE_ATTR_RSA_EXPONENT1, &ctx->DP },
+		{ TEE_ATTR_RSA_EXPONENT2, &ctx->DQ },
+		{ TEE_ATTR_RSA_COEFFICIENT, &ctx->QP },
+	};
+
+	TEE_Attribute *att = TEE_Malloc(sizeof(TEE_Attribute) * max_attrs,
+					TEE_MALLOC_FILL_ZERO);
+
+	if (!att) {
+		EMSG("Failed to allocate memory");
+		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
+	}
+
+	for (uint32_t i = 0; i < KM_ATTR_COUNT_RSA; i++) {
+		if (mpi_to_att(&att[i], mpis[i].mpi, mpis[i].att_id)) {
+			EMSG("Failed to write mpi to att");
+			goto out;
+		}
+
+		count++;
+	}
+
+	*attrs = att;
+	*attrs_count = KM_ATTR_COUNT_RSA;
+	*key_size = (uint32_t)mbedtls_pk_get_bitlen(context);
+	ret = KM_ERROR_OK;
+
+out:
+	if (ret != KM_ERROR_OK)
+		free_attrs(att, count);
+
+	return ret;
+}
+
+/* Convert mbedtls_ecdsa_context* to TEE_Attributes array */
+static keymaster_error_t mbedtls_export_ecdsa(TEE_Attribute **attrs,
+					      uint32_t *attrs_count,
+					      uint32_t *key_size,
+					      mbedtls_pk_context *context) {
+	mbedtls_ecdsa_context *ctx = context->pk_ctx;
+	uint32_t max_attrs = KM_ATTR_COUNT_EC, count = 0;
+	uint32_t curve;
+	keymaster_error_t ret = KM_ERROR_UNKNOWN_ERROR;
+	struct mpi_id mpis[KM_ATTR_COUNT_EC - 1] = {
+		{ TEE_ATTR_ECC_PRIVATE_VALUE, &ctx->d },
+		{ TEE_ATTR_ECC_PUBLIC_VALUE_X, &ctx->Q.X },
+		{ TEE_ATTR_ECC_PUBLIC_VALUE_Y, &ctx->Q.Y }
+	};
+
+	TEE_Attribute *att = TEE_Malloc(sizeof(TEE_Attribute) * max_attrs,
+					TEE_MALLOC_FILL_ZERO);
+
+	if (!att) {
+		EMSG("Failed to allocate memory");
+		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
+	}
+
+	for (uint32_t i = 0; i < KM_ATTR_COUNT_EC - 1; i++) {
+		if (mpi_to_att(&att[i], mpis[i].mpi, mpis[i].att_id)) {
+			EMSG("Failed to write mpi to att");
+			goto out;
+		}
+
+		count++;
+	}
+
+	*key_size = (uint32_t)mbedtls_pk_get_bitlen(context);
+	curve = TA_get_curve_nist(*key_size);
+
+	EMSG ("key_size = %u", *key_size);
+
+	TEE_InitValueAttribute(&att[KM_ATTR_COUNT_EC - 1],
+			       TEE_ATTR_ECC_CURVE, curve, 0);
+
+	*attrs = att;
+	*attrs_count = KM_ATTR_COUNT_EC;
+
+	ret = KM_ERROR_OK;
+
+out:
+	if (ret != KM_ERROR_OK)
+		free_attrs(att, count);
+
+	return KM_ERROR_OK;
+}
+
+keymaster_error_t mbedtls_decode_pkcs8(keymaster_blob_t key_data,
+				       TEE_Attribute **attrs,
+				       uint32_t *attrs_count,
+				       const keymaster_algorithm_t algorithm,
+				       uint32_t *key_size,
+				       uint64_t *rsa_public_exponent)
+{
+	mbedtls_pk_context pk;
+	keymaster_error_t ret = KM_ERROR_UNKNOWN_ERROR;
+	mbedtls_pk_type_t pk_type;
+	uint64_t rsa_exp = 0;
+
+	keymaster_error_t (*pfn_export_ctx)(TEE_Attribute **, uint32_t *,
+					    uint32_t *, mbedtls_pk_context *);
+
+	mbedtls_pk_init(&pk);
+	int mbedtls_ret = mbedtls_pk_parse_key(&pk, key_data.data,
+				       key_data.data_length, NULL, 0);
+	if (mbedtls_ret != 0) {
+		EMSG("Failed to parse pkcs8 key");
+		return KM_ERROR_INVALID_KEY_BLOB;
+	}
+
+	pk_type = mbedtls_pk_get_type(&pk);
+
+	if ((algorithm == KM_ALGORITHM_RSA && pk_type != MBEDTLS_PK_RSA) ||
+	    (algorithm == KM_ALGORITHM_EC && pk_type != MBEDTLS_PK_ECKEY)) {
+		EMSG ("Algorithm mismatch.");
+		ret = KM_ERROR_INVALID_KEY_BLOB;
+		goto out;
+	}
+
+	if (algorithm == KM_ALGORITHM_RSA &&
+	    rsa_public_exponent && *rsa_public_exponent == UNDEFINED) {
+		mbedtls_rsa_context *ctx = pk.pk_ctx;
+		size_t len = mbedtls_mpi_size(&ctx->E);
+
+		if(len > sizeof(rsa_exp)) {
+			EMSG("Wrond public exponent");
+			goto out;
+		}
+
+		mbedtls_mpi_write_binary(&ctx->E,
+					 (unsigned char*)&rsa_exp,
+					 sizeof(rsa_exp));
+
+		*rsa_public_exponent = TEE_U64_FROM_BIG_ENDIAN(rsa_exp);
+	}
+
+	pfn_export_ctx = algorithm == KM_ALGORITHM_RSA ? mbedtls_export_rsa :
+							 mbedtls_export_ecdsa;
+	ret = pfn_export_ctx(attrs, attrs_count, key_size, &pk);
+	if (ret) {
+		EMSG("Failed to export context");
+		goto out;
+	}
+out:
+	mbedtls_pk_free(&pk);
+	return ret;
 }
 
 /* create mbedtls_pk_context based on ECC key attributes */
@@ -248,6 +436,7 @@ out:
 
 	return res;
 }
+
 /* create mbedtls_pk_context based on RSA key attributes */
 static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 					const TEE_ObjectHandle key_obj)

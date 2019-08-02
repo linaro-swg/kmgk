@@ -341,6 +341,7 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Failed to generate key, res=%x", res);
 		goto exit;
 	}
+
 	//TODO add bind keys to operating system and patch level version
 
 	TA_serialize_param_set(key_material + key_buffer_size, &params_t);
@@ -470,7 +471,6 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint32_t characts_size = 0;
 	uint32_t key_size = UNDEFINED;
 	uint32_t attrs_in_count = 0;
-	uint32_t curve = UNDEFINED;
 	uint64_t key_rsa_public_exponent = UNDEFINED;
 
 	DMSG("%s %d", __func__, __LINE__);
@@ -544,9 +544,11 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 			res = KM_ERROR_UNSUPPORTED_KEY_FORMAT;
 //			goto out;
 		}
-		res = TA_decode_pkcs8(sessionSTA, key_data, &attrs_in,
-				&attrs_in_count, key_algorithm, &key_size,
-				&key_rsa_public_exponent);
+
+		res = mbedtls_decode_pkcs8(key_data, &attrs_in,
+					   &attrs_in_count, key_algorithm,
+					   &key_size, &key_rsa_public_exponent);
+
 		if (res != KM_ERROR_OK)
 			goto out;
 		if (key_algorithm == KM_ALGORITHM_RSA && (key_size % 8 != 0 ||
@@ -556,20 +558,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 			res = KM_ERROR_UNSUPPORTED_KEY_SIZE;
 			goto out;
 		}
-		if (key_algorithm == KM_ALGORITHM_EC) {
-			curve = TA_get_curve_nist(key_size);
-			if (curve == UNDEFINED) {
-				EMSG("Failed to get ECC curve nist");
-				res = KM_ERROR_UNSUPPORTED_EC_CURVE;
-				goto out;
-			}
-			TEE_InitValueAttribute(
-					attrs_in + attrs_in_count,
-					TEE_ATTR_ECC_CURVE,
-					curve,
-					0);
-			attrs_in_count++;
-		} else { /* KM_ALGORITHM_RSA */
+		if (key_algorithm == KM_ALGORITHM_RSA) {
 			if (key_size > MAX_KEY_RSA) {
 				EMSG("RSA key size must be multiple of 8 and less than %u",
 								MAX_KEY_RSA);
@@ -578,7 +567,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 			}
 		}
 	}
-	TA_add_to_params(&params_t, key_size, key_rsa_public_exponent, curve);
+	TA_add_to_params(&params_t, key_size, key_rsa_public_exponent);
 	res = TA_fill_characteristics(&characts,
 					&params_t, &characts_size);
 	if (res != KM_ERROR_OK)

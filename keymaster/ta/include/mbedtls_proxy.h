@@ -20,6 +20,13 @@
 
 #include "ta_ca_defs.h"
 
+keymaster_error_t mbedtls_decode_pkcs8(keymaster_blob_t key_data,
+				       TEE_Attribute **attrs,
+				       uint32_t *attrs_count,
+				       const keymaster_algorithm_t algorithm,
+				       uint32_t *key_size,
+				       uint64_t *rsa_public_exponent);
+
 // TODO: have a comment here saying something about the RSA
 // algorithm/schema in use or if there are any limitations. I.e, a
 // general description of what kind of root cert it generates.

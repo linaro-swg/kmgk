@@ -16,7 +16,7 @@
  */
 
 #include "parameters.h"
-
+#include "generator.h"
 const size_t kMinGcmTagLength = 12 * 8;
 const size_t kMaxGcmTagLength = 16 * 8;
 
@@ -50,11 +50,11 @@ void TA_free_cert_chain(keymaster_cert_chain_t *cert_chain)
 }
 
 void TA_add_to_params(keymaster_key_param_set_t *params,
-				const uint32_t key_size,
-				const uint64_t rsa_public_exponent,
-				const uint32_t curve)
+		      const uint32_t key_size,
+		      const uint64_t rsa_public_exponent)
 {
 	bool was_added = false;
+	uint32_t curve = TA_get_curve_nist(key_size);
 	DMSG("%s %d", __func__, __LINE__);
 
 	if (key_size != UNDEFINED) {
