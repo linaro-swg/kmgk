@@ -204,7 +204,7 @@ static TEE_Result TA_set_rsa_attest_key(TEE_TASessionHandle sessionSTA, keymaste
 	for (uint32_t i = 0; i < attrs_count; i++) {
 		//Store RSA key in format: size | buffer attribute
 		DMSG("attrs[i].attributeID 0x%08X size %d", attrs[i].attributeID, attrs[i].content.ref.length);
-		result = TA_write_attest_obj_attr(RSAobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
+		result = TA_write_obj_attr(RSAobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
 		if (result != TEE_SUCCESS) {
 			EMSG("Failed to write RSA attribute %x, res=%x",
 					attrs[i].attributeID, result);
@@ -275,7 +275,7 @@ static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster
 	for (uint32_t i = 0; i < attrs_count; i++) {
 		//Attributes are "Ref"
 		DMSG("attrs[i].attributeID 0x%08X size %d", attrs[i].attributeID, attrs[i].content.ref.length);
-		result = TA_write_attest_obj_attr(ECobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
+		result = TA_write_obj_attr(ECobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
 		if (result != TEE_SUCCESS) {
 			EMSG("Failed to write EC attribute %x, res=%x",
 					attrs[i].attributeID, result);
@@ -446,7 +446,7 @@ static TEE_Result TA_create_rsa_attest_key(void)
 			}
 
 			//Store RSA key in format: size | buffer attribute
-			res = TA_write_attest_obj_attr(RSAobject, buffer, buffSize);
+			res = TA_write_obj_attr(RSAobject, buffer, buffSize);
 			if (res != TEE_SUCCESS) {
 				EMSG("Failed to write RSA attribute %x, res=%x",
 						attributes[i], res);
@@ -560,7 +560,7 @@ static TEE_Result TA_create_ec_attest_key(void)
 
 				DHEXDUMP(buffer, buffSize);
 				//Store EC key in format: size | buffer attribute
-				res = TA_write_attest_obj_attr(ECobject, buffer, buffSize);
+				res = TA_write_obj_attr(ECobject, buffer, buffSize);
 				if (res != TEE_SUCCESS) {
 					EMSG("Failed to write EC attribute %x, res=%x",
 							attributes[i], res);
@@ -824,24 +824,6 @@ void TA_close_attest_obj(TEE_ObjectHandle attObj)
 	if (attObj != TEE_HANDLE_NULL) {
 		TEE_CloseObject(attObj);
 	}
-}
-
-TEE_Result TA_write_attest_obj_attr(TEE_ObjectHandle attObj,
-		const uint8_t *buffer, const uint32_t buffSize)
-{
-	TEE_Result res = TEE_SUCCESS;
-	//Store attest object in format: size | buffer attribute
-	res = TEE_WriteObjectData(attObj, (void *)&buffSize, sizeof(uint32_t));
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to write attribute length, res=%x", res);
-		return res;
-	}
-	res = TEE_WriteObjectData(attObj, (void *)buffer, buffSize);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to write attribute buffer, res=%x", res);
-		return res;
-	}
-	return res;
 }
 
 TEE_Result TA_write_attest_cert(TEE_ObjectHandle attObj,

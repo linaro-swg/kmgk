@@ -81,9 +81,6 @@ TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA);
 
 void TA_close_attest_obj(TEE_ObjectHandle attObj);
 
-TEE_Result TA_write_attest_obj_attr(TEE_ObjectHandle attObj,
-		const uint8_t *buffer, const uint32_t buffSize);
-
 TEE_Result TA_write_attest_cert(TEE_ObjectHandle attObj,
 		const uint8_t *buffer, const size_t buffSize);
 TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
