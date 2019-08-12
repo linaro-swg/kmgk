@@ -327,8 +327,8 @@ static TEE_Result TA_append_root_rsa_attest_cert(keymaster_blob_t cert)
 	}
 
 	//Store cert in format: size | ASN.1 DER buffer
-	res = TA_write_attest_cert(CertObject,
-			cert.data, cert.data_length);
+	res = TA_write_obj_attr(CertObject,
+				cert.data, cert.data_length);
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to write RSA certificate, res=%x", res);
 	}
@@ -375,8 +375,8 @@ static TEE_Result TA_append_root_ec_attest_cert(keymaster_blob_t cert)
 	}
 
 	//Store cert in format: size | ASN.1 DER buffer
-	res = TA_write_attest_cert(CertObject,
-			cert.data, cert.data_length);
+	res = TA_write_obj_attr(CertObject,
+				cert.data, cert.data_length);
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to write EC certificate, res=%x", res);
 	}
@@ -628,8 +628,9 @@ static TEE_Result TA_create_root_rsa_attest_cert(TEE_TASessionHandle sessionSTA)
 		}
 
 		//Store cert in format: size | ASN.1 DER buffer
-		res = TA_write_attest_cert(CertObject,
-				root_cert.data, root_cert.data_length);
+		res = TA_write_obj_attr(CertObject,
+				root_cert.data,
+				(uint32_t)root_cert.data_length);
 		if (res != TEE_SUCCESS) {
 			EMSG("Failed to write RSA certificate, res=%x", res);
 		}
@@ -691,8 +692,9 @@ static TEE_Result TA_create_root_ec_attest_cert(TEE_TASessionHandle sessionSTA)
 		}
 
 		//Store cert in format: size | ASN.1 DER buffer
-		res = TA_write_attest_cert(CertObject,
-				root_cert.data, root_cert.data_length);
+		res = TA_write_obj_attr(CertObject,
+					root_cert.data,
+					(uint32_t)root_cert.data_length);
 		if (res != TEE_SUCCESS) {
 			EMSG("Failed to write EC certificate, res=%x", res);
 		}
