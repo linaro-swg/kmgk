@@ -56,52 +56,6 @@ static unsigned int add_key_usage(keymaster_key_characteristics_t *key_chr)
 	return key_usage;
 }
 
-keymaster_error_t TA_encode_ec_sign(const TEE_TASessionHandle sessionSTA,
-				uint8_t *out, uint32_t *out_l)
-{
-	uint32_t r_size = *out_l / 2;
-	uint32_t s_size = *out_l / 2;
-	uint8_t r[r_size];
-	uint8_t s[s_size];
-	keymaster_error_t res = KM_ERROR_OK;
-	uint32_t exp_param_types = TEE_PARAM_TYPES(
-						TEE_PARAM_TYPE_MEMREF_INPUT,
-						TEE_PARAM_TYPE_MEMREF_INPUT,
-						TEE_PARAM_TYPE_MEMREF_OUTPUT,
-						TEE_PARAM_TYPE_NONE);
-	TEE_Param params[TEE_NUM_PARAMS];
-
-	TEE_MemMove(r, out, r_size);
-	TEE_MemMove(s, out + r_size, s_size);
-	params[2].memref.buffer = out;
-	params[2].memref.size = 0;
-	params[1].memref.buffer = s;
-	params[1].memref.size = s_size;
-	params[0].memref.buffer = r;
-	params[0].memref.size = r_size;
-	if (sessionSTA == TEE_HANDLE_NULL) {
-		EMSG("Session with static TA is not opened");
-		res = KM_ERROR_SECURE_HW_COMMUNICATION_FAILED;
-		goto out;
-	}
-	res = TEE_InvokeTACommand(sessionSTA, TEE_TIMEOUT_INFINITE,
-				CMD_EC_SIGN_ENCODE, exp_param_types,
-				params, NULL);
-	if (res != TEE_SUCCESS) {
-		EMSG("Invoke command for ASN.1 parser (EC sign) failed, res=%x",
-		     res);
-		goto out;
-	}
-	if (params[2].memref.size == 0) {
-		EMSG("ASN.1 parser (EC sign) output is empty");
-		res = KM_ERROR_UNSUPPORTED_KEY_ENCRYPTION_ALGORITHM;
-		goto out;
-	}
-out:
-	*out_l = params[2].memref.size;
-	return res;
-}
-
 keymaster_error_t TA_encode_key(const TEE_TASessionHandle sessionSTA,
 				keymaster_blob_t *export_data,
 				const uint32_t type,
@@ -565,47 +519,5 @@ error_1:
 	}
 	TA_close_attest_obj(rootAttKey);
 
-	return res;
-}
-
-keymaster_error_t TA_decode_ec_sign(const TEE_TASessionHandle sessionSTA,
-				keymaster_blob_t *signature,
-				uint32_t key_size)
-{
-	uint8_t out[signature->data_length];
-	keymaster_error_t res = KM_ERROR_OK;
-	uint32_t exp_param_types = TEE_PARAM_TYPES(
-						TEE_PARAM_TYPE_MEMREF_INPUT,
-						TEE_PARAM_TYPE_VALUE_INPUT,
-						TEE_PARAM_TYPE_MEMREF_OUTPUT,
-						TEE_PARAM_TYPE_NONE);
-	TEE_Param params[TEE_NUM_PARAMS];
-
-	if (signature->data_length == 0 || signature->data == NULL)
-		return KM_ERROR_VERIFICATION_FAILED;
-	TEE_MemFill(out, 0, signature->data_length);
-	params[0].memref.buffer = signature->data;
-	params[0].memref.size = signature->data_length;
-	params[1].value.a = key_size;
-	params[2].memref.buffer = out;
-	params[2].memref.size = 0;
-	if (sessionSTA == TEE_HANDLE_NULL) {
-		EMSG("Session with static TA is not opened");
-		return KM_ERROR_SECURE_HW_COMMUNICATION_FAILED;
-	}
-	res = TEE_InvokeTACommand(sessionSTA, TEE_TIMEOUT_INFINITE,
-				CMD_EC_SIGN_DECODE, exp_param_types,
-				params, NULL);
-	if (res != TEE_SUCCESS) {
-		EMSG("Invoke command for ASN.1 parser (EC sign) failed, res=%x", res);
-		return KM_ERROR_VERIFICATION_FAILED;
-	}
-	if (params[2].memref.size == 0) {
-		EMSG("ASN.1 parser (EC sign) output is empty");
-		return KM_ERROR_UNSUPPORTED_KEY_ENCRYPTION_ALGORITHM;
-	}
-	TEE_MemFill(signature->data, 0, signature->data_length);
-	signature->data_length = params[2].memref.size;
-	TEE_MemMove(signature->data, out, signature->data_length);
 	return res;
 }

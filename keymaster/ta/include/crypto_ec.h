@@ -40,7 +40,6 @@ keymaster_error_t TA_ec_finish(const keymaster_operation_t *operation,
 				keymaster_blob_t *signature,
 				uint32_t *out_size,
 				const uint32_t key_size,
-				TEE_TASessionHandle *sessionSTA,
 				bool *is_input_ext);
 
 #endif/* ANDROID_OPTEE_CRYPTO_EC_H */
