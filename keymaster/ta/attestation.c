@@ -327,8 +327,8 @@ static TEE_Result TA_append_root_rsa_attest_cert(keymaster_blob_t cert)
 	}
 
 	//Store cert in format: size | ASN.1 DER buffer
-	res = TA_write_attest_cert(CertObject,
-			cert.data, cert.data_length);
+	res = TA_write_obj_attr(CertObject,
+				cert.data, cert.data_length);
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to write RSA certificate, res=%x", res);
 	}
@@ -375,8 +375,8 @@ static TEE_Result TA_append_root_ec_attest_cert(keymaster_blob_t cert)
 	}
 
 	//Store cert in format: size | ASN.1 DER buffer
-	res = TA_write_attest_cert(CertObject,
-			cert.data, cert.data_length);
+	res = TA_write_obj_attr(CertObject,
+				cert.data, cert.data_length);
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to write EC certificate, res=%x", res);
 	}
@@ -628,8 +628,9 @@ static TEE_Result TA_create_root_rsa_attest_cert(TEE_TASessionHandle sessionSTA)
 		}
 
 		//Store cert in format: size | ASN.1 DER buffer
-		res = TA_write_attest_cert(CertObject,
-				root_cert.data, root_cert.data_length);
+		res = TA_write_obj_attr(CertObject,
+				root_cert.data,
+				(uint32_t)root_cert.data_length);
 		if (res != TEE_SUCCESS) {
 			EMSG("Failed to write RSA certificate, res=%x", res);
 		}
@@ -691,8 +692,9 @@ static TEE_Result TA_create_root_ec_attest_cert(TEE_TASessionHandle sessionSTA)
 		}
 
 		//Store cert in format: size | ASN.1 DER buffer
-		res = TA_write_attest_cert(CertObject,
-				root_cert.data, root_cert.data_length);
+		res = TA_write_obj_attr(CertObject,
+					root_cert.data,
+					(uint32_t)root_cert.data_length);
 		if (res != TEE_SUCCESS) {
 			EMSG("Failed to write EC certificate, res=%x", res);
 		}
@@ -824,24 +826,6 @@ void TA_close_attest_obj(TEE_ObjectHandle attObj)
 	if (attObj != TEE_HANDLE_NULL) {
 		TEE_CloseObject(attObj);
 	}
-}
-
-TEE_Result TA_write_attest_cert(TEE_ObjectHandle attObj,
-		const uint8_t *buffer, const size_t buffSize)
-{
-	TEE_Result res = TEE_SUCCESS;
-	//Store certificate in format: size | ASN.1 DER buffer
-	res = TEE_WriteObjectData(attObj, (void *)&buffSize, sizeof(size_t));
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to write certificate length, res=%x", res);
-		return res;
-	}
-	res = TEE_WriteObjectData(attObj, (void *)buffer, buffSize);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to write certificate buffer, res=%x", res);
-		return res;
-	}
-	return res;
 }
 
 static unsigned long fetch_length(const unsigned char *in, unsigned long inlen)

@@ -81,8 +81,6 @@ TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA);
 
 void TA_close_attest_obj(TEE_ObjectHandle attObj);
 
-TEE_Result TA_write_attest_cert(TEE_ObjectHandle attObj,
-		const uint8_t *buffer, const size_t buffSize);
 TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 						keymaster_cert_chain_t *cert_chain);
 

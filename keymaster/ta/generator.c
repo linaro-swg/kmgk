@@ -483,6 +483,8 @@ TEE_Result TA_write_obj_attr(TEE_ObjectHandle attObj,
 {
 	TEE_Result res = TEE_SUCCESS;
 	//Store attest object in format: size | buffer attribute
+	//or
+	//Store certificate in format: size | ASN.1 DER buffer
 	res = TEE_WriteObjectData(attObj, (void *)&buffSize, sizeof(uint32_t));
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to write attribute length, res=%x", res);
