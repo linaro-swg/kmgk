@@ -164,68 +164,11 @@ TEE_Result TA_open_root_ec_attest_cert(TEE_ObjectHandle *attCert)
 }
 
 #ifdef CFG_ATTESTATION_PROVISIONING
-static TEE_Result TA_set_rsa_attest_key(keymaster_blob_t key_data)
+static keymaster_error_t TA_set_attest_key(keymaster_blob_t key_data,
+					   keymaster_algorithm_t algorithm)
 {
-	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
-	TEE_ObjectHandle RSAobject = TEE_HANDLE_NULL;
-	TEE_Attribute *attrs = NULL;
-	uint32_t attrs_count = 0;
-	uint64_t key_rsa_public_exponent = UNDEFINED;
-	uint32_t key_size = UNDEFINED;
-
-	DMSG("RSA root attestation key ...");
-
-	if (mbedtls_decode_pkcs8(key_data, &attrs,
-			&attrs_count, KM_ALGORITHM_RSA, &key_size,
-			&key_rsa_public_exponent) != KM_ERROR_OK) {
-		goto error_1;
-	}
-
-	if (key_size % 8 != 0 || key_size > MAX_KEY_RSA) {
-		EMSG("RSA key size %d must be multiple of 8 and less than %u",
-							key_size,MAX_KEY_RSA);
-		goto error_2;
-	}
-
-	/*
-	 * Create object in storage
-	 * Can store this in RPMB by replacing TEE_STORAGE_PRIVATE with
-	 * TEE_STORAGE_PRIVATE_RPMB
-	 */
-	result = TEE_CreatePersistentObject(TEE_STORAGE_PRIVATE,
-			RsaAttKeyID, sizeof(RsaAttKeyID),
-			TEE_DATA_FLAG_ACCESS_WRITE,
-			TEE_HANDLE_NULL, NULL, 0U, &RSAobject);
-	if (result != TEE_SUCCESS) {
-		EMSG("Failed to create a RSA persistent key, res=%x", result);
-		goto error_2;
-	}
-
-	for (uint32_t i = 0; i < attrs_count; i++) {
-		//Store RSA key in format: size | buffer attribute
-		DMSG("attrs[i].attributeID 0x%08X size %d", attrs[i].attributeID, attrs[i].content.ref.length);
-		result = TA_write_obj_attr(RSAobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
-		if (result != TEE_SUCCESS) {
-			EMSG("Failed to write RSA attribute %x, res=%x",
-					attrs[i].attributeID, result);
-			goto error_3;
-		}
-	}
-error_3:
-	(result == TEE_SUCCESS) ?
-			TEE_CloseObject(RSAobject) :
-			TEE_CloseAndDeletePersistentObject(RSAobject);
-error_2:
-	free_attrs(attrs, attrs_count);
-
-error_1:
-	return result;
-}
-
-static TEE_Result TA_set_ec_attest_key(keymaster_blob_t key_data)
-{
-	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
-	TEE_ObjectHandle ECobject = TEE_HANDLE_NULL;
+	keymaster_error_t ret = KM_ERROR_UNKNOWN_ERROR;
+	TEE_ObjectHandle object = TEE_HANDLE_NULL;
 	TEE_Attribute *attrs = NULL;
 	uint32_t attrs_count = 0;
 	uint64_t key_rsa_public_exponent = UNDEFINED;
@@ -233,17 +176,12 @@ static TEE_Result TA_set_ec_attest_key(keymaster_blob_t key_data)
 
 	DMSG("EC root attestation key creation...");
 
-	if (mbedtls_decode_pkcs8(key_data, &attrs,
-			&attrs_count, KM_ALGORITHM_EC, &key_size,
-			&key_rsa_public_exponent) != KM_ERROR_OK) {
-		goto error_1;
-	}
-
-	curve = TA_get_curve_nist(key_size);
-	if (curve == UNDEFINED) {
-		EMSG("Failed to get ECC curve nist");
-		result = TEE_ERROR_BAD_PARAMETERS;
-		goto error_2;
+	ret = mbedtls_decode_pkcs8(key_data, &attrs,
+				   &attrs_count, algorithm,
+				   &key_size, &key_rsa_public_exponent);
+	if (ret != KM_ERROR_OK) {
+		EMSG("Failed to decode pkcs8 key with err = %d", ret);
+		return ret;
 	}
 
 	/*
@@ -251,47 +189,13 @@ static TEE_Result TA_set_ec_attest_key(keymaster_blob_t key_data)
 	 * Can store this in RPMB by replacing TEE_STORAGE_PRIVATE with
 	 * TEE_STORAGE_PRIVATE_RPMB
 	 */
-	result = TEE_CreatePersistentObject(TEE_STORAGE_PRIVATE,
-			EcAttKeyID, sizeof(EcAttKeyID),
-			TEE_DATA_FLAG_ACCESS_WRITE,
-			TEE_HANDLE_NULL, NULL, 0U, &ECobject);
-	if (result != TEE_SUCCESS) {
-		if (result == TEE_ERROR_ACCESS_CONFLICT)
-			EMSG("Key already provisioned");
-		EMSG("Failed to create a EC persistent key, res=%x", result);
-		goto error_2;
-	}
+	ret = TA_persistent_obj_from_attrs(&object, attrs, attrs_count,
+					   EcAttKeyID, sizeof(EcAttKeyID));
+	if (ret != KM_ERROR_OK)
+		EMSG("Failed to create persistent object");
 
-	DMSG("curve 0x%08X", curve);
-	result = TEE_WriteObjectData(ECobject,
-			(void *)&curve, sizeof(uint32_t));
-	if (result != TEE_SUCCESS)
-	{
-		EMSG("Failed to write Curve value res=%x",
-				result);
-		goto error_3;
-	}
-
-	for (uint32_t i = 0; i < attrs_count; i++) {
-		//Attributes are "Ref"
-		DMSG("attrs[i].attributeID 0x%08X size %d", attrs[i].attributeID, attrs[i].content.ref.length);
-		result = TA_write_obj_attr(ECobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
-		if (result != TEE_SUCCESS) {
-			EMSG("Failed to write EC attribute %x, res=%x",
-					attrs[i].attributeID, result);
-			goto error_3;
-		}
-	}
-error_3:
-	(result == TEE_SUCCESS) ?
-			TEE_CloseObject(ECobject) :
-			TEE_CloseAndDeletePersistentObject(ECobject);
-
-error_2:
 	free_attrs(attrs, attrs_count);
-
-error_1:
-	return result;
+	return ret;
 }
 
 static TEE_Result TA_append_root_rsa_attest_cert(keymaster_blob_t cert)
