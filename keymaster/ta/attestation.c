@@ -164,7 +164,7 @@ TEE_Result TA_open_root_ec_attest_cert(TEE_ObjectHandle *attCert)
 }
 
 #ifdef CFG_ATTESTATION_PROVISIONING
-static TEE_Result TA_set_rsa_attest_key(TEE_TASessionHandle sessionSTA, keymaster_blob_t key_data)
+static TEE_Result TA_set_rsa_attest_key(keymaster_blob_t key_data)
 {
 	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
 	TEE_ObjectHandle RSAobject = TEE_HANDLE_NULL;
@@ -175,7 +175,7 @@ static TEE_Result TA_set_rsa_attest_key(TEE_TASessionHandle sessionSTA, keymaste
 
 	DMSG("RSA root attestation key ...");
 
-	if (TA_decode_pkcs8(sessionSTA, key_data, &attrs,
+	if (mbedtls_decode_pkcs8(key_data, &attrs,
 			&attrs_count, KM_ALGORITHM_RSA, &key_size,
 			&key_rsa_public_exponent) != KM_ERROR_OK) {
 		goto error_1;
@@ -222,7 +222,7 @@ error_1:
 	return result;
 }
 
-static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster_blob_t key_data)
+static TEE_Result TA_set_ec_attest_key(keymaster_blob_t key_data)
 {
 	TEE_Result result = TEE_ERROR_BAD_PARAMETERS;
 	TEE_ObjectHandle ECobject = TEE_HANDLE_NULL;
@@ -233,7 +233,7 @@ static TEE_Result TA_set_ec_attest_key(TEE_TASessionHandle sessionSTA, keymaster
 
 	DMSG("EC root attestation key creation...");
 
-	if (TA_decode_pkcs8(sessionSTA, key_data, &attrs,
+	if (mbedtls_decode_pkcs8(key_data, &attrs,
 			&attrs_count, KM_ALGORITHM_EC, &key_size,
 			&key_rsa_public_exponent) != KM_ERROR_OK) {
 		goto error_1;
@@ -1061,7 +1061,7 @@ exit:
 }
 
 #ifdef CFG_ATTESTATION_PROVISIONING
-keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param params[TEE_NUM_PARAMS])
+keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
 {
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
@@ -1090,7 +1090,7 @@ keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param
 
     switch (algorithm) {
     case KM_ALGORITHM_RSA:
-		result = TA_set_rsa_attest_key(sessionSTA, input);
+		result = TA_set_rsa_attest_key(input);
 		if (result != TEE_SUCCESS) {
 			EMSG("Something wrong with root RSA key, res=%x", result);
 			/* TODO : convert TEE result in KM result */
@@ -1099,7 +1099,7 @@ keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param
 		}
         break;
     case KM_ALGORITHM_EC:
-		result = TA_set_ec_attest_key(sessionSTA, input);
+		result = TA_set_ec_attest_key(input);
 		if (result != TEE_SUCCESS) {
 			EMSG("Something wrong with root EC key, res=%x", result);
 			/* TODO : convert TEE result in KM result */

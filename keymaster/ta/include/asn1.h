@@ -35,14 +35,6 @@
 #define CMD_ASN1_GEN_ATT_EC_CERT 7
 #define CMD_ASN1_GEN_ATT_EXTENSION 8
 
-keymaster_error_t TA_decode_pkcs8(const TEE_TASessionHandle sessionSTA,
-				keymaster_blob_t key_data,
-				TEE_Attribute **attrs,
-				uint32_t *attrs_count,
-				const keymaster_algorithm_t algorithm,
-				uint32_t *key_size,
-				uint64_t *rsa_public_exponent);
-
 keymaster_error_t TA_encode_ec_sign(const TEE_TASessionHandle sessionSTA,
 				uint8_t *out, uint32_t *out_l);
 
