@@ -511,6 +511,21 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 				goto out;
 			}
 		}
+		if (key_algorithm == KM_ALGORITHM_HMAC && (key_size % 8 != 0 ||
+						key_size > MAX_KEY_HMAC ||
+						key_size < MIN_KEY_HMAC)) {
+			EMSG("HMAC key size must be multiple of 8 in range from %d to %d",
+						MIN_KEY_HMAC, MAX_KEY_HMAC);
+			res = KM_ERROR_UNSUPPORTED_KEY_SIZE;
+			goto out;
+		} else if (key_algorithm == KM_ALGORITHM_AES &&
+				key_size != 128 && key_size != 192
+				&& key_size != 256) {
+			EMSG("Unsupported key size %d ! Supported only 128, 192 and 256",key_size);
+			res = KM_ERROR_UNSUPPORTED_KEY_SIZE;
+			goto out;
+		}
+
 		attrs_in = TEE_Malloc(sizeof(TEE_Attribute),
 							TEE_MALLOC_FILL_ZERO);
 		if (!attrs_in) {
@@ -522,20 +537,6 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 
 		TEE_InitRefAttribute(attrs_in, TEE_ATTR_SECRET_VALUE,
 				(void *) key_data.data, key_data.data_length);
-		if (key_algorithm == KM_ALGORITHM_HMAC && (key_size % 8 != 0 ||
-						key_size > MAX_KEY_HMAC ||
-						key_size < MIN_KEY_HMAC)) {
-			EMSG("HMAC key size must be multiple of 8 in range from %d to %d",
-						MIN_KEY_HMAC, MAX_KEY_HMAC);
-			res = KM_ERROR_UNSUPPORTED_KEY_SIZE;
-			goto free_attrs;
-		} else if (key_algorithm == KM_ALGORITHM_AES &&
-				key_size != 128 && key_size != 192
-				&& key_size != 256) {
-			EMSG("Unsupported key size! Supported only 128, 192 and 256");
-			res = KM_ERROR_UNSUPPORTED_KEY_SIZE;
-			goto free_attrs;
-		}
 	} else {/* KM_KEY_FORMAT_PKCS8 */
 		if (key_algorithm != KM_ALGORITHM_RSA &&
 				key_algorithm != KM_ALGORITHM_EC) {
@@ -619,7 +620,7 @@ out:
 		(key_data.data && key_format == KM_KEY_FORMAT_RAW && res != KM_ERROR_OK)) {
 		TEE_Free(key_data.data);
 	}
-free_attrs:
+
 	free_attrs(attrs_in, attrs_in_count);
 	TA_free_params(&params_t);
 	TA_free_params(&characts.sw_enforced);
@@ -724,6 +725,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 	keymaster_key_param_set_t attest_params = EMPTY_PARAM_SET;/* IN */
 	keymaster_cert_chain_t cert_chain = EMPTY_CERT_CHAIN;/* OUT */
 	keymaster_error_t res = KM_ERROR_OK;
+	TEE_Result result = TEE_SUCCESS;
 	keymaster_blob_t *challenge = NULL;
 	bool includeUniqueID = false;
 	bool resetSinceIDRotation = false;
@@ -753,9 +755,9 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 
 #ifndef CFG_ATTESTATION_PROVISIONING
 	//This call creates keys/certs only once during first TA run
-	res = TA_create_attest_objs(sessionSTA);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to create attestation objects, res=%x", res);
+	result = TA_create_attest_objs(sessionSTA);
+	if (result != TEE_SUCCESS) {
+		EMSG("Failed to create attestation objects, res=%x", result);
 		res = KM_ERROR_UNKNOWN_ERROR;
 		goto exit;
 	}
@@ -888,11 +890,12 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 		goto exit;
 	}
 	//Generate key attestation certificate (using STA ASN.1)
-	res = TA_gen_key_attest_cert(sessionSTA, key_type, attestedKey,
+	result = TA_gen_key_attest_cert(sessionSTA, key_type, attestedKey,
 				     &attest_params, &key_chr, &cert_chain,
 				     verified_boot_state);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to gen key att cert, res=%x", res);
+	if (result != TEE_SUCCESS) {
+		EMSG("Failed to gen key att cert, res=%x", result);
+		res = KM_ERROR_UNKNOWN_ERROR;
 		goto exit;
 	}
 
@@ -907,7 +910,7 @@ exit:
 	//Serialize output chain of certificates
 	out += TA_serialize_rsp_err(out, &res);
 	if (res == KM_ERROR_OK) {
-	out += TA_serialize_cert_chain_akms(out, &cert_chain, &res);
+		out += TA_serialize_cert_chain_akms(out, &cert_chain, &res);
 		if (res != KM_ERROR_OK) {
 			EMSG("Failed to serialize output chain of certificates, res=%x", res);
 			goto exit;
@@ -1533,6 +1536,7 @@ TEE_Result TA_InvokeCommandEntryPoint(void *sess_ctx __unused,
 		return TA_GetAuthTokenKey(params);
 
 	default:
-		return TEE_ERROR_BAD_PARAMETERS;
+		DMSG("Unknown command %d",cmd_id);
+		return KM_ERROR_UNIMPLEMENTED;
 	}
 }
