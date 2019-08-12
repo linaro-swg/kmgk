@@ -1519,7 +1519,7 @@ TEE_Result TA_InvokeCommandEntryPoint(void *sess_ctx __unused,
 	//Provisioning commands:
 	case KM_SET_ATTESTATION_KEY:
 		DMSG("KM_SET_ATTESTATION_KEY");
-		return TA_SetAttestationKey(sessionSTA,params);
+		return TA_SetAttestationKey(params);
 	case KM_APPEND_ATTESTATION_CERT_CHAIN:
 		DMSG("KM_APPEND_ATTESTATION_CERT_CHAIN");
 		return TA_AppendAttestationCertKey(params);
