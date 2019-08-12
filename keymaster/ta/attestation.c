@@ -735,7 +735,8 @@ keymaster_error_t TA_read_root_attest_cert(uint32_t type,
 	}
 
 	if (res != TEE_SUCCESS) {
-		goto error_1;
+		EMSG("Failed to open root certificate, res=%x", res);
+		goto error;
 	}
 
 	//Read root certificate
@@ -743,11 +744,11 @@ keymaster_error_t TA_read_root_attest_cert(uint32_t type,
 	if ((res != TEE_SUCCESS) &&
 		(res != TEE_ERROR_SHORT_BUFFER)) {
 		EMSG("Failed to read root certificate, res=%x", res);
-		goto error_1;
 	}
 
-error_1:
 	TA_close_attest_obj(rootAttCert);
+
+error:
 	switch (res)
 	{
 		case TEE_SUCCESS:
