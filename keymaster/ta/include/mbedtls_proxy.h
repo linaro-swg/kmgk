@@ -20,12 +20,16 @@
 
 #include "ta_ca_defs.h"
 
-keymaster_error_t mbedtls_decode_pkcs8(keymaster_blob_t key_data,
+keymaster_error_t mbedTLS_decode_pkcs8(keymaster_blob_t key_data,
 				       TEE_Attribute **attrs,
 				       uint32_t *attrs_count,
 				       const keymaster_algorithm_t algorithm,
 				       uint32_t *key_size,
 				       uint64_t *rsa_public_exponent);
+
+keymaster_error_t mbedTLS_encode_key(keymaster_blob_t *export_data,
+                                     const uint32_t type,
+                                     const TEE_ObjectHandle *obj_h);
 
 // TODO: have a comment here saying something about the RSA
 // algorithm/schema in use or if there are any limitations. I.e, a
@@ -47,5 +51,11 @@ TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
 						unsigned int key_usage,
 						keymaster_cert_chain_t *cert_chain,
 						keymaster_blob_t *attest_ext);
+
+
+keymaster_error_t mbedTLS_encode_ec_sign(uint8_t *out, uint32_t *out_l);
+
+keymaster_error_t mbedTLS_decode_ec_sign(keymaster_blob_t *sig,
+					 uint32_t key_size);
 
 #endif /* MBEDTLS_PROXY_H_ */

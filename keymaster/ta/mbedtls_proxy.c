@@ -19,6 +19,7 @@
 #include <mbedtls/x509_csr.h>
 #include <mbedtls/x509.h>
 #include <mbedtls/pk.h>
+#include <mbedtls/asn1write.h>
 
 
 #define CERT_ROOT_ORG "Android"
@@ -173,7 +174,7 @@ out:
 	return KM_ERROR_OK;
 }
 
-keymaster_error_t mbedtls_decode_pkcs8(keymaster_blob_t key_data,
+keymaster_error_t mbedTLS_decode_pkcs8(keymaster_blob_t key_data,
 				       TEE_Attribute **attrs,
 				       uint32_t *attrs_count,
 				       const keymaster_algorithm_t algorithm,
@@ -751,7 +752,6 @@ out:
 	return res;
 }
 
-
 TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle rsa_root_key,
 				     keymaster_blob_t *rsa_root_cert)
 {
@@ -1105,4 +1105,137 @@ out:
     TEE_Free( cert );
 
 	return res;
+}
+
+keymaster_error_t mbedTLS_encode_ec_sign(uint8_t *out, uint32_t *out_l) {
+	keymaster_error_t ret = KM_ERROR_UNKNOWN_ERROR;
+	uint32_t r_size = *out_l / 2;
+	uint32_t s_size = *out_l / 2;
+	mbedtls_mpi r, s;
+	unsigned char buf[MBEDTLS_ECDSA_MAX_LEN];
+	unsigned char *p = buf + sizeof( buf );
+	int len = 0;
+	int total_len = 0;
+
+	mbedtls_mpi_init(&r);
+	mbedtls_mpi_init(&s);
+
+	if (mbedtls_mpi_read_binary(&r, out, r_size) ||
+	    mbedtls_mpi_read_binary(&s, out + r_size, s_size)) {
+		EMSG("Failed to read binary signature");
+		goto err;
+	}
+
+	len = mbedtls_asn1_write_mpi(&p, buf, &s);
+	if (len < 0) {
+		EMSG("Failed to write S MPI");
+		goto err;
+	}
+
+	total_len += len;
+	len = mbedtls_asn1_write_mpi(&p, buf, &r);
+	if (len < 0) {
+		EMSG("Failed to write R MPI");
+		goto err;
+	}
+
+	total_len += len;
+	len = mbedtls_asn1_write_len(&p, buf, (size_t)total_len);
+	if (len < 0) {
+		EMSG("Failed to write asn1 buffer");
+		goto err;
+	}
+
+	total_len += len;
+	len = mbedtls_asn1_write_tag(&p, buf, MBEDTLS_ASN1_CONSTRUCTED |
+					       MBEDTLS_ASN1_SEQUENCE);
+	if (len < 0) {
+		EMSG("Failed to write ASN1 tags");
+		goto err;
+	}
+
+	total_len += len;
+	TEE_MemMove(out, p, (uint32_t)total_len);
+	*out_l = (uint32_t)total_len;
+	ret = KM_ERROR_OK;
+
+err:
+	mbedtls_mpi_free(&r);
+	mbedtls_mpi_free(&s);
+
+	return ret;
+}
+
+keymaster_error_t mbedTLS_decode_ec_sign(keymaster_blob_t *sig,
+					 uint32_t key_size) {
+	keymaster_error_t ret = KM_ERROR_VERIFICATION_FAILED;
+	unsigned char *p = (unsigned char *)sig->data;
+	const unsigned char *end = sig->data + sig->data_length;
+	size_t len, slen, rlen;
+	mbedtls_mpi r, s;
+
+	/* We need key syze in bytes. */
+	key_size = (key_size + 7) / 8;
+
+	mbedtls_mpi_init(&r);
+	mbedtls_mpi_init(&s);
+	if (mbedtls_asn1_get_tag(&p, end, &len,
+				 MBEDTLS_ASN1_CONSTRUCTED |
+				 MBEDTLS_ASN1_SEQUENCE )) {
+		EMSG("Failed to get ASN1 tag");
+		goto err;
+	}
+
+	if( p + len != end ) {
+	    EMSG("Signature decoding failed");
+	    goto err;
+	}
+
+	if(mbedtls_asn1_get_mpi(&p, end, &r) ||
+	   mbedtls_asn1_get_mpi(&p, end, &s)) {
+	    EMSG("Failed to get bignums from integers of ec signature");
+	    goto err;
+	}
+
+	/*
+	 * R and S are expected to be the same size as key (in bytes).
+	 * Thise numbers are calculated using pseudo-random values (rfc6979),
+	 * and sometimes it hapens that one of that values have key_szie-1 lengh
+	 * byte array representation (513 bits, for example). In that case
+	 * mbedtls returns actual bytes count to represent this value as byte
+	 * array. (65 instead of expected 66 for 513-bit values). We can not
+	 * leave it as is, because libtomcrypt crypto_acipher_ecc_verify(..)
+	 * routine expects that signature is exactly 2x(key_size) bytes length.
+	 * Otherwise it triggers TEE_Panic(TEE_ERROR_BAD_PARAMETERS).
+	 */
+
+	rlen = mbedtls_mpi_size(&r);
+	if (rlen > key_size) {
+		EMSG("R can not be larger than key");
+		goto err;
+	}
+
+	rlen = key_size;
+
+	slen = mbedtls_mpi_size(&s);
+	if (slen > key_size) {
+		EMSG("S can not be larger than key");
+		goto err;
+	}
+	slen = key_size;
+
+
+	if (mbedtls_mpi_write_binary(&r, sig->data, rlen) ||
+	    mbedtls_mpi_write_binary(&s, sig->data + rlen, slen)) {
+		EMSG("Failed to export bignum data to buffer");
+		goto err;
+	}
+
+	sig->data_length = rlen + slen;
+	ret = KM_ERROR_OK;
+err:
+	mbedtls_mpi_free(&r);
+	mbedtls_mpi_free(&s);
+
+	return ret;
 }

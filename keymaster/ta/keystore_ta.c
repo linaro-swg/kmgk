@@ -545,7 +545,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 //			goto out;
 		}
 
-		res = mbedtls_decode_pkcs8(key_data, &attrs_in,
+		res = mbedTLS_decode_pkcs8(key_data, &attrs_in,
 					   &attrs_in_count, key_algorithm,
 					   &key_size, &key_rsa_public_exponent);
 
@@ -1370,8 +1370,7 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 		break;
 	case TEE_TYPE_ECDSA_KEYPAIR:
 		res = TA_ec_finish(&operation, &input, &output, &signature,
-					&out_size, key_size,
-					&sessionSTA, &is_input_ext);
+					&out_size, key_size, &is_input_ext);
 		break;
 	default: /* HMAC */
 		if (operation.purpose == KM_PURPOSE_SIGN) {

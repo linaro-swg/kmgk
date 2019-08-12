@@ -176,7 +176,7 @@ static keymaster_error_t TA_set_attest_key(keymaster_blob_t key_data,
 
 	DMSG("EC root attestation key creation...");
 
-	ret = mbedtls_decode_pkcs8(key_data, &attrs,
+	ret = mbedTLS_decode_pkcs8(key_data, &attrs,
 				   &attrs_count, algorithm,
 				   &key_size, &key_rsa_public_exponent);
 	if (ret != KM_ERROR_OK) {
