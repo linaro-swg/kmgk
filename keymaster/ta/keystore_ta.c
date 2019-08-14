@@ -911,10 +911,6 @@ exit:
 	out += TA_serialize_rsp_err(out, &res);
 	if (res == KM_ERROR_OK) {
 		out += TA_serialize_cert_chain_akms(out, &cert_chain, &res);
-		if (res != KM_ERROR_OK) {
-			EMSG("Failed to serialize output chain of certificates, res=%x", res);
-			goto exit;
-		}
 	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
@@ -982,7 +978,8 @@ static keymaster_error_t TA_deleteKey(TEE_Param params[TEE_NUM_PARAMS])
 	out = (uint8_t *) params[1].memref.buffer;
 	out += TA_serialize_rsp_err(out, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
-	return KM_ERROR_OK;
+
+	return res;
 }
 
 //Deletes all keys
@@ -995,7 +992,8 @@ static keymaster_error_t TA_deleteAllKeys(TEE_Param params[TEE_NUM_PARAMS])
 	out = (uint8_t *) params[1].memref.buffer;
 	out += TA_serialize_rsp_err(out, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
-	return KM_ERROR_OK;
+
+	return res;
 }
 
 //Permanently disable the ID attestation feature.
@@ -1118,6 +1116,7 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 		}
 		nonce_param = TEE_Malloc(sizeof(keymaster_key_param_t), TEE_MALLOC_FILL_ZERO);
 		if (!nonce_param) {
+			TEE_Free(secretIV);
 			EMSG("Failed to allocate memory for parameters");
 			res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
 			goto out;

@@ -93,13 +93,7 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 		goto out;
 	}
 
-	ecc = (mbedtls_ecdsa_context *)TEE_Malloc(sizeof(mbedtls_ecdsa_context),
-						  TEE_MALLOC_FILL_ZERO);
-	if (ecc == NULL)
-	{
-		res = TEE_ERROR_OUT_OF_MEMORY;
-		goto out;
-	}
+	ecc = pk->pk_ctx;
 
 	mbedtls_ecdsa_init(ecc);
 
@@ -241,8 +235,6 @@ static TEE_Result mbedTLS_import_ecc_pk(mbedtls_pk_context *pk,
 		goto out;
 	}
 
-	pk->pk_ctx = ecc;
-
 out:
 	mbedtls_ctr_drbg_free(&ctr_drbg);
 	mbedtls_entropy_free(&entropy);
@@ -252,7 +244,6 @@ out:
 
 	if (res != TEE_SUCCESS) {
 		mbedtls_ecp_keypair_free(ecc);
-		TEE_Free(ecc);
 	}
 
 	return res;
@@ -311,13 +302,7 @@ static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 		goto out;
 	}
 
-	rsa = (mbedtls_rsa_context *) TEE_Malloc(sizeof(mbedtls_rsa_context),
-					       TEE_MALLOC_FILL_ZERO);
-	if (rsa == NULL)
-	{
-		res = TEE_ERROR_OUT_OF_MEMORY;
-		goto out;
-	}
+	rsa = pk->pk_ctx;
 
 	mbedtls_rsa_init(rsa, MBEDTLS_RSA_PKCS_V15, 0);
 
@@ -434,8 +419,6 @@ static TEE_Result mbedTLS_import_rsa_pk(mbedtls_pk_context *pk,
 	mbedtls_mpi_mod_mpi(&rsa->DQ, &rsa->D, &K);
 	mbedtls_mpi_inv_mod(&rsa->QP, &rsa->Q, &rsa->P);
 
-	pk->pk_ctx = rsa;
-
 out:
 	mbedtls_ctr_drbg_free(&ctr_drbg);
 	mbedtls_entropy_free(&entropy);
@@ -446,7 +429,6 @@ out:
 
 	if (res != TEE_SUCCESS) {
 		mbedtls_rsa_free(rsa);
-		TEE_Free(rsa);
 	}
 
 	return res;

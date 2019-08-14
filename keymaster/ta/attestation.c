@@ -989,6 +989,7 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 		//Read root certificate, index[n], DER data
 		res = TEE_ReadObjectData(attObj, pBuf, nCertLen, &actual_read);
 		if (res != TEE_SUCCESS || actual_read != nCertLen) {
+			TEE_Free(pBuf);
 			EMSG("Failed to read root certificate data, res=%x", res);
 			goto error;
 		}

@@ -160,7 +160,7 @@ int TA_deserialize_auth_set(uint8_t *in, const uint8_t *end,
 	presence p = KM_POPULATED;
 	uint32_t indirect_data_size = 0;
 	uint32_t elem_serialized_size = 0;
-	uint8_t * indirect_base;
+	uint8_t * indirect_base = NULL;
 	const uint8_t * indirect_end;
 
 	DMSG("%s %d", __func__, __LINE__);
@@ -169,19 +169,19 @@ int TA_deserialize_auth_set(uint8_t *in, const uint8_t *end,
 		if (IS_OUT_OF_BOUNDS(in, end, sizeof(p))) {
 			EMSG("Out of input array bounds on deserialization");
 			*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
-			return in - start;
+			goto out;
 		}
 		TEE_MemMove(&p, in, sizeof(p));
 		in += sizeof(p);
 	}
 	if (p == KM_NULL)
-		return in - start;
+		goto out;
 
 	//Size of indirect_data_(uint32_t)
 	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
-		return in - start;
+		goto out;
 	}
 	TEE_MemMove(&indirect_data_size, in, sizeof(indirect_data_size));
 	in += SIZE_LENGTH_AKMS;
@@ -193,7 +193,7 @@ int TA_deserialize_auth_set(uint8_t *in, const uint8_t *end,
 	if (!indirect_base) {
 		EMSG("Failed to allocate memory for blob");
 		*res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
-		return in - start;
+		goto out;
 	}
 	DMSG("indirect_base:%p", indirect_base);
 	TEE_MemMove(indirect_base, in, indirect_data_size);
@@ -204,7 +204,7 @@ int TA_deserialize_auth_set(uint8_t *in, const uint8_t *end,
 	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
-		return in - start;
+		goto out;
 	}
 	TEE_MemMove(&param_set->length, in, SIZE_LENGTH_AKMS);
 	in += SIZE_LENGTH_AKMS;
@@ -214,7 +214,7 @@ int TA_deserialize_auth_set(uint8_t *in, const uint8_t *end,
 	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
-		return in - start;
+		goto out;
 	}
 	TEE_MemMove(&elem_serialized_size, in, SIZE_LENGTH_AKMS);
 	in += SIZE_LENGTH_AKMS;
@@ -231,14 +231,16 @@ int TA_deserialize_auth_set(uint8_t *in, const uint8_t *end,
 	if (!param_set->params) {
 		EMSG("Failed to allocate memory for params");
 		*res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
-		return in - start;
+		goto out;
 	}
 	for (size_t i = 0; i < param_set->length; i++) {
 		param_deserialize(&(param_set->params[i]), &in, end, indirect_base, indirect_end);
 	}
 
+out:
 	//free indirect_base, data malloc and copy in param_deserialize
-	TEE_Free(indirect_base);
+	if (indirect_base)
+		TEE_Free(indirect_base);
 
 	return in - start;
 }
