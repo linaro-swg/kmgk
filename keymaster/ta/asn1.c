@@ -25,23 +25,21 @@ static unsigned int get_key_usage(keymaster_key_param_t *param)
 {
 	unsigned int key_usage = 0;
 
-	switch (param->tag) {
-	case KM_TAG_PURPOSE:
-		DMSG("key purpose 0x%08X",param->key_param.enumerated);
-		if ((param->key_param.enumerated == KM_PURPOSE_VERIFY) ||
-			(param->key_param.enumerated == KM_PURPOSE_SIGN))
-		{
-			key_usage = MBEDTLS_X509_KU_DIGITAL_SIGNATURE;
-		}
-		if ((param->key_param.enumerated == KM_PURPOSE_ENCRYPT) ||
-			(param->key_param.enumerated == KM_PURPOSE_DECRYPT))
-		{
-			key_usage |= MBEDTLS_X509_KU_KEY_ENCIPHERMENT | MBEDTLS_X509_KU_DATA_ENCIPHERMENT;
-		}
-		break;
-	default:
+	if (param->tag != KM_TAG_PURPOSE) {
 		DMSG("Unused parameter tag %x", param->tag);
-		break;
+		return 0;
+	}
+
+	DMSG("key purpose 0x%08X",param->key_param.enumerated);
+	if ((param->key_param.enumerated == KM_PURPOSE_VERIFY) ||
+		(param->key_param.enumerated == KM_PURPOSE_SIGN))
+	{
+		key_usage = MBEDTLS_X509_KU_DIGITAL_SIGNATURE;
+	}
+	if ((param->key_param.enumerated == KM_PURPOSE_ENCRYPT) ||
+		(param->key_param.enumerated == KM_PURPOSE_DECRYPT))
+	{
+		key_usage |= MBEDTLS_X509_KU_KEY_ENCIPHERMENT | MBEDTLS_X509_KU_DATA_ENCIPHERMENT;
 	}
 
 	return key_usage;
@@ -51,9 +49,6 @@ static unsigned int add_key_usage(keymaster_key_characteristics_t *key_chr)
 {
 	unsigned int key_usage = 0;
 
-	for (size_t i = 0; i < key_chr->sw_enforced.length; i++) {
-		key_usage |= get_key_usage(&(key_chr->sw_enforced.params[i]));
-	}
 	for (size_t i = 0; i < key_chr->hw_enforced.length; i++) {
 		key_usage |= get_key_usage(&(key_chr->hw_enforced.params[i]));
 	}

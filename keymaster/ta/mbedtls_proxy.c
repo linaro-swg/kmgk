@@ -704,7 +704,8 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
-	ret = mbedtls_x509write_crt_set_basic_constraints(&crt, 1, -1);
+	/* cA to false cause key_usage do not contain MBEDTLS_X509_KU_KEY_CERT_SIGN */
+	ret = mbedtls_x509write_crt_set_basic_constraints(&crt, 0, -1);
 	if (ret) {
 		EMSG("mbedtls_x509write_crt_set_basic_constraints: failed: -%#x", -ret);
 		res = TEE_ERROR_BAD_FORMAT;
