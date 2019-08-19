@@ -29,6 +29,33 @@
 
 #define MBEDTLS_OID_ATTESTATION "\x2B\x06\x01\x04\x01\xD6\x79\x02\x01\x11"
 
+/*
+ * RSA public keys:
+ *  SubjectPublicKeyInfo  ::=  SEQUENCE  {          1 + 3
+ *       algorithm            AlgorithmIdentifier,  1 + 1 (sequence)
+ *                                                + 1 + 1 + 9 (rsa oid)
+ *                                                + 1 + 1 (params null)
+ *       subjectPublicKey     BIT STRING }          1 + 3 + (1 + below)
+ *  RSAPublicKey ::= SEQUENCE {                     1 + 3
+ *      modulus           INTEGER,  -- n            1 + 3 + MPI_MAX + 1
+ *      publicExponent    INTEGER   -- e            1 + 3 + MPI_MAX + 1
+ *  }
+ */
+#define RSA_MAX_BYTES   38 + 2 * MBEDTLS_MPI_MAX_SIZE
+
+/*
+ * EC public keys:
+ *  SubjectPublicKeyInfo  ::=  SEQUENCE  {      1 + 2
+ *    algorithm         AlgorithmIdentifier,    1 + 1 (sequence)
+ *                                            + 1 + 1 + 7 (ec oid)
+ *                                            + 1 + 1 + 9 (namedCurve oid)
+ *    subjectPublicKey  BIT STRING              1 + 2 + 1               [1]
+ *                                            + 1 (point format)        [1]
+ *                                            + 2 * ECP_MAX (coords)    [1]
+ *  }
+ */
+#define EC_MAX_BYTES   30 + 2 * MBEDTLS_ECP_MAX_BYTES
+
 const char *cert_root_subject_rsa = "OU=" CERT_ROOT_ORG_UNIT_RSA
 			       ",O=" CERT_ROOT_ORG
 			       ",CN=" CERT_ROOT_ORG;
@@ -750,6 +777,46 @@ out:
 	mbedtls_x509write_crt_free(&crt);
 
 	return res;
+}
+
+keymaster_error_t mbedTLS_encode_key(keymaster_blob_t *export_data,
+                                     const uint32_t type,
+                                     const TEE_ObjectHandle *obj_h) {
+	mbedtls_pk_context pk;
+	uint8_t buf[RSA_MAX_BYTES > EC_MAX_BYTES ? RSA_MAX_BYTES :
+						   EC_MAX_BYTES];
+	keymaster_error_t ret = KM_ERROR_UNKNOWN_ERROR;
+	TEE_Result res;
+	int len;
+
+	if (type == TEE_TYPE_ECDSA_KEYPAIR)
+		res = mbedTLS_import_ecc_pk(&pk, *obj_h);
+	else if (type == TEE_TYPE_RSA_KEYPAIR)
+		res = mbedTLS_import_rsa_pk(&pk, *obj_h);
+
+	if (res != TEE_SUCCESS) {
+		EMSG("Failed to import PK context");
+		return ret;
+	}
+
+	len = mbedtls_pk_write_pubkey_der(&pk, buf, sizeof(buf));
+	if (len < 0) {
+		EMSG("Failed to write PK context to DER");
+		goto out;
+	}
+
+	export_data->data = TEE_Malloc((uint32_t)len, TEE_MALLOC_FILL_ZERO);
+	if (!export_data->data) {
+		EMSG("No memory left on device");
+		ret = KM_ERROR_MEMORY_ALLOCATION_FAILED;
+		goto out;
+	}
+	export_data->data_length = (size_t)len;
+	TEE_MemMove(export_data->data, buf, (uint32_t)len);
+
+out:
+	mbedtls_pk_free(&pk);
+	return ret;
 }
 
 TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle rsa_root_key,
