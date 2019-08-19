@@ -680,7 +680,7 @@ static keymaster_error_t TA_exportKey(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("This key type is not exportable");
 		goto out;
 	}
-	res = TA_encode_key(sessionSTA, &export_data, type, &obj_h, key_size);
+	res = mbedTLS_encode_key(&export_data, type, &obj_h);
 	if (res != KM_ERROR_OK)
 		goto out;
 

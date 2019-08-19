@@ -35,12 +35,6 @@
 #define CMD_ASN1_GEN_ATT_EC_CERT 7
 #define CMD_ASN1_GEN_ATT_EXTENSION 8
 
-keymaster_error_t TA_encode_key(const TEE_TASessionHandle sessionSTA,
-				keymaster_blob_t *export_data,
-				const uint32_t type,
-				const TEE_ObjectHandle *obj_h,
-				const uint32_t key_size);
-
 TEE_Result TA_gen_root_rsa_cert(const TEE_TASessionHandle sessionSTA,
 				TEE_ObjectHandle root_rsa_key,
 				keymaster_blob_t *root_cert);
