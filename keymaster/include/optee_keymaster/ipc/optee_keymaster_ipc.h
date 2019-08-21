@@ -27,12 +27,14 @@ __BEGIN_DECLS
 const uint32_t OPTEE_KEYMASTER_RECV_BUF_SIZE = 2 * PAGE_SIZE;
 const uint32_t OPTEE_KEYMASTER_SEND_BUF_SIZE = 2 * PAGE_SIZE;
 
+int optee_keymaster_initialize(void);
 int optee_keymaster_connect(void);
 
 keymaster_error_t optee_keymaster_call(uint32_t cmd, const keymaster::Serializable& req,
                         keymaster::KeymasterResponse* rsp);
 
 void optee_keymaster_disconnect(void);
+void optee_keymaster_finalize(void);
 
 const char* print_error_message(uint32_t error);
 

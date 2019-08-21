@@ -28,6 +28,12 @@ namespace keymaster {
 int OpteeKeymaster::Initialize() {
     int err;
 
+    err = optee_keymaster_initialize();
+    if (err) {
+        ALOGE("Failed to connect to optee keymaster %d", err);
+        return err;
+    }
+
     err = optee_keymaster_connect();
     if (err) {
         ALOGE("Failed to connect to optee keymaster %d", err);
@@ -53,6 +59,7 @@ OpteeKeymaster::OpteeKeymaster() {}
 
 OpteeKeymaster::~OpteeKeymaster() {
     optee_keymaster_disconnect();
+    optee_keymaster_finalize();
 }
 
 static void ForwardCommand(enum keymaster_command command, const Serializable& req,
