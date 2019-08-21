@@ -40,6 +40,20 @@ OpteeIPC::OpteeIPC()
 OpteeIPC::~OpteeIPC()
 {
     disconnect();
+    finalize();
+}
+
+bool OpteeIPC::initialize()
+{
+    TEEC_Result res;
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+    if (res != TEEC_SUCCESS) {
+        ALOGE("TEEC_InitializeContext failed with code 0x%x", res);
+        return false;
+    }
+
+    return true;
 }
 
 bool OpteeIPC::connect(const TEEC_UUID& uuid)
@@ -52,17 +66,10 @@ bool OpteeIPC::connect(const TEEC_UUID& uuid)
 
     TEEC_Result res;
 
-    res = TEEC_InitializeContext(NULL, &ctx);
-    if (res != TEEC_SUCCESS) {
-        ALOGE("TEEC_InitializeContext failed with code 0x%x", res);
-        return false;
-    }
-
     uint32_t err_origin;
     res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC,
             NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
-        TEEC_FinalizeContext(&ctx);
         ALOGE("TEEC_Opensession failed with code 0x%x origin 0x%x",
             res, err_origin);
 
@@ -74,11 +81,15 @@ bool OpteeIPC::connect(const TEEC_UUID& uuid)
     return true;
 }
 
+void OpteeIPC::finalize()
+{
+    TEEC_FinalizeContext(&ctx);
+}
+
 void OpteeIPC::disconnect()
 {
     if (inUse) {
         TEEC_CloseSession(&sess);
-        TEEC_FinalizeContext(&ctx);
     }
 
     inUse = false;

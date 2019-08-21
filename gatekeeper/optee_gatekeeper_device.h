@@ -62,8 +62,10 @@ public:
     Return<void> deleteUser(uint32_t uid, deleteUser_cb _hidl_cb)  override;
     Return<void> deleteAllUsers(deleteAllUsers_cb _hidl_cb)  override;
 private:
+    bool initialize();
     bool connect();
     void disconnect();
+    void finalize();
 
     bool Send(uint32_t command, const uint8_t *request, uint32_t request_size,
                            uint8_t *response, uint32_t& response_size);

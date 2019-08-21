@@ -33,12 +33,14 @@ namespace optee {
 OpteeGateKeeperDevice::OpteeGateKeeperDevice()
     : connected_(false)
 {
+    initialize();
     connect();
 }
 
 OpteeGateKeeperDevice::~OpteeGateKeeperDevice()
 {
     disconnect();
+    finalize();
 }
 
 bool OpteeGateKeeperDevice::getConnected() {
@@ -310,6 +312,16 @@ Return<void> OpteeGateKeeperDevice::deleteAllUsers(deleteAllUsers_cb cb)
     return Void();
 }
 
+bool OpteeGateKeeperDevice::initialize()
+{
+    if (!gatekeeperIPC_.initialize()) {
+        ALOGE("Fail to connect to TEE");
+        return false;
+    }
+
+    return true;
+}
+
 bool OpteeGateKeeperDevice::connect()
 {
     if (connected_) {
@@ -336,6 +348,11 @@ void OpteeGateKeeperDevice::disconnect()
     }
 
     ALOGV("Disconnected");
+}
+
+void OpteeGateKeeperDevice::finalize()
+{
+    gatekeeperIPC_.finalize();
 }
 
 bool OpteeGateKeeperDevice::Send(uint32_t command,
