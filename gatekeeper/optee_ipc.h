@@ -32,6 +32,9 @@ public:
     OpteeIPC();
     ~OpteeIPC();
 
+    bool initialize();
+    void finalize();
+
     bool connect(const TEEC_UUID& uuid);
     void disconnect();
     bool call(uint32_t cmd,
