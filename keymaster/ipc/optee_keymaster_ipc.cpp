@@ -32,6 +32,18 @@ static TEEC_Context ctx;
 static TEEC_Session sess;
 static bool connected = false;
 
+int optee_keymaster_initialize(void) {
+    TEEC_Result res;
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+    if (res != TEEC_SUCCESS) {
+        ALOGE("TEEC_InitializeContext failed with code 0x%x", res);
+        return (int)res;
+    }
+
+    return 0;
+}
+
 int optee_keymaster_connect(void) {
     TEEC_Result res;
     TEEC_UUID uuid = TA_KEYMASTER_UUID;
@@ -41,17 +53,11 @@ int optee_keymaster_connect(void) {
         ALOGE("Connection with trustled application already established");
         return false;
     }
-    res = TEEC_InitializeContext(NULL, &ctx);
-    if (res != TEEC_SUCCESS) {
-        ALOGE("TEEC_InitializeContext failed with code 0x%x", res);
-        return (int)res;
-    }
 
     /* Open a session to the TA */
     res = TEEC_OpenSession(&ctx, &sess, &uuid, TEEC_LOGIN_PUBLIC,
             NULL, NULL, &err_origin);
     if (res != TEEC_SUCCESS) {
-        TEEC_FinalizeContext(&ctx);
         ALOGE("TEEC_Opensession failed with code 0x%x origin 0x%x",
                 res, err_origin);
         return (int)res;
@@ -63,8 +69,11 @@ int optee_keymaster_connect(void) {
 
 void optee_keymaster_disconnect(void) {
     TEEC_CloseSession(&sess);
-    TEEC_FinalizeContext(&ctx);
     connected  = false;
+}
+
+void optee_keymaster_finalize(void) {
+    TEEC_FinalizeContext(&ctx);
 }
 
 const char* keymaster_error_message(uint32_t error) {
