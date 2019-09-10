@@ -812,8 +812,9 @@ keymaster_error_t mbedTLS_encode_key(keymaster_blob_t *export_data,
 		goto out;
 	}
 	export_data->data_length = (size_t)len;
-	TEE_MemMove(export_data->data, buf, (uint32_t)len);
+	TEE_MemMove(export_data->data, buf + sizeof(buf) - len, (uint32_t)len);
 
+	ret = KM_ERROR_OK;
 out:
 	mbedtls_pk_free(&pk);
 	return ret;
