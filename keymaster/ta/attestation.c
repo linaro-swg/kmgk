@@ -978,7 +978,7 @@ keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
 
     switch (algorithm) {
     case KM_ALGORITHM_RSA:
-		result = TA_set_rsa_attest_key(input);
+		result = TA_set_attest_key(input, KM_ALGORITHM_RSA);
 		if (result != TEE_SUCCESS) {
 			EMSG("Something wrong with root RSA key, res=%x", result);
 			/* TODO : convert TEE result in KM result */
@@ -987,7 +987,7 @@ keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
 		}
         break;
     case KM_ALGORITHM_EC:
-		result = TA_set_ec_attest_key(input);
+		result = TA_set_attest_key(input, KM_ALGORITHM_EC);
 		if (result != TEE_SUCCESS) {
 			EMSG("Something wrong with root EC key, res=%x", result);
 			/* TODO : convert TEE result in KM result */
