@@ -732,24 +732,6 @@ void TA_close_attest_obj(TEE_ObjectHandle attObj)
 	}
 }
 
-TEE_Result TA_write_attest_cert(TEE_ObjectHandle attObj,
-		const uint8_t *buffer, const size_t buffSize)
-{
-	TEE_Result res = TEE_SUCCESS;
-	//Store certificate in format: size | ASN.1 DER buffer
-	res = TEE_WriteObjectData(attObj, (void *)&buffSize, sizeof(size_t));
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to write certificate length, res=%x", res);
-		return res;
-	}
-	res = TEE_WriteObjectData(attObj, (void *)buffer, buffSize);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to write certificate buffer, res=%x", res);
-		return res;
-	}
-	return res;
-}
-
 static unsigned long fetch_length(const unsigned char *in, unsigned long inlen)
 {
    unsigned long x, z;
