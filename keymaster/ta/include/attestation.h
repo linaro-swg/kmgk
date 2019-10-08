@@ -64,7 +64,7 @@ TEE_Result TA_open_root_rsa_attest_cert(TEE_ObjectHandle *attCert);
 TEE_Result TA_open_root_ec_attest_cert(TEE_ObjectHandle *attCert);
 
 #ifdef CFG_ATTESTATION_PROVISIONING
-keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param params[TEE_NUM_PARAMS]);
+keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS]);
 keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS]);
 #endif
 
