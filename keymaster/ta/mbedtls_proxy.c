@@ -786,13 +786,15 @@ keymaster_error_t mbedTLS_encode_key(keymaster_blob_t *export_data,
 	uint8_t buf[RSA_MAX_BYTES > EC_MAX_BYTES ? RSA_MAX_BYTES :
 						   EC_MAX_BYTES];
 	keymaster_error_t ret = KM_ERROR_UNKNOWN_ERROR;
-	TEE_Result res;
+	TEE_Result res = TEE_ERROR_NOT_SUPPORTED;
 	int len;
 
 	if (type == TEE_TYPE_ECDSA_KEYPAIR)
 		res = mbedTLS_import_ecc_pk(&pk, *obj_h);
 	else if (type == TEE_TYPE_RSA_KEYPAIR)
 		res = mbedTLS_import_rsa_pk(&pk, *obj_h);
+	else
+		EMSG("Unsupported keypair type");
 
 	if (res != TEE_SUCCESS) {
 		EMSG("Failed to import PK context");
