@@ -26,7 +26,7 @@ cc_test {
     ],
     static_libs: [
         "android.hardware.keymaster@3.0",
-        "libcrypto",
+        "libcrypto_static",
         "libsoftkeymasterdevice",
     ],
 }
