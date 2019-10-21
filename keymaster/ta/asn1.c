@@ -205,8 +205,9 @@ TEE_Result TA_gen_attest_rsa_cert(const TEE_TASessionHandle sessionSTA,
 		goto error_1;
 	}
 
-	res = mbedTLS_gen_attest_key_cert_rsa(rootAttKey,
+	res = mbedTLS_gen_attest_key_cert(rootAttKey,
 					attestedKey,
+					KM_ALGORITHM_RSA,
 					key_usage,
 					cert_chain,
 					&attest_ext);
@@ -383,8 +384,9 @@ TEE_Result TA_gen_attest_ec_cert(const TEE_TASessionHandle sessionSTA,
 		goto error_1;
 	}
 
-	res = mbedTLS_gen_attest_key_cert_ecc(rootAttKey,
+	res = mbedTLS_gen_attest_key_cert(rootAttKey,
 					attestedKey,
+					KM_ALGORITHM_EC,
 					key_usage,
 					cert_chain,
 					&attest_ext);

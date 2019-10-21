@@ -1039,142 +1039,80 @@ out:
 	return res;
 }
 
-TEE_Result mbedTLS_gen_attest_key_cert_rsa(TEE_ObjectHandle rsa_root_key,
-						TEE_ObjectHandle rsa_attest_key,
-						unsigned int key_usage,
-						keymaster_cert_chain_t *cert_chain,
-						keymaster_blob_t *attest_ext)
-{
+TEE_Result mbedTLS_gen_attest_key_cert(TEE_ObjectHandle root_key,
+				       TEE_ObjectHandle attest_key,
+				       keymaster_algorithm_t alg,
+				       unsigned int key_usage,
+				       keymaster_cert_chain_t *cert_chain,
+				       keymaster_blob_t *attest_ext) {
 	int ret;
 	TEE_Result res = TEE_SUCCESS;
-	keymaster_blob_t *rsa_attest_cert = &cert_chain->entries[KEY_ATT_CERT_INDEX];
+	keymaster_blob_t *attest_cert = &cert_chain->entries[KEY_ATT_CERT_INDEX];
+	mbedtls_x509_crt *cert = NULL;
 	mbedtls_pk_context issuer_key = {NULL,NULL};
 	mbedtls_pk_context subject_key = {NULL,NULL};
-	mbedtls_x509_crt *cert = NULL;
-   	char cert_subject_rsa[1024];
-    const unsigned char *p = (unsigned char*)cert_chain->entries[ROOT_ATT_CERT_INDEX].data;
-    size_t cert_len = cert_chain->entries[ROOT_ATT_CERT_INDEX].data_length;
+	char cert_subject[1024];
+	const unsigned char *p = (unsigned char*)cert_chain->entries[ROOT_ATT_CERT_INDEX].data;
+	size_t cert_len = cert_chain->entries[ROOT_ATT_CERT_INDEX].data_length;
 
 	DMSG("%s %d", __func__, __LINE__);
 
-    cert = (mbedtls_x509_crt*)TEE_Malloc( sizeof( mbedtls_x509_crt ), TEE_MALLOC_FILL_ZERO );
-    if( cert == NULL )
-        return TEE_ERROR_OUT_OF_MEMORY;
+	cert = (mbedtls_x509_crt*)TEE_Malloc(sizeof(mbedtls_x509_crt),
+					     TEE_MALLOC_FILL_ZERO);
+	if( cert == NULL )
+		return TEE_ERROR_OUT_OF_MEMORY;
 
-    mbedtls_x509_crt_init( cert );
+	mbedtls_x509_crt_init(cert);
 
 	DMSG("root certificate: \n");
 	DHEXDUMP(p,cert_len);
 
-    if( ( mbedtls_x509_crt_parse_der( cert,
-                                            p, cert_len ) ) != 0 )
-    {
+	if ((mbedtls_x509_crt_parse_der(cert, p, cert_len)) != 0) {
 		EMSG("mbedtls_x509_crt_parse_der: failed");
-        res = TEE_ERROR_BAD_PARAMETERS;
-    	goto out;
-    }
-
-	res = mbedTLS_import_rsa_pk(&issuer_key, rsa_root_key);
-	if (res) {
-		EMSG("mbedTLS_import_rsa_pk: failed: %#x", res);
+		res = TEE_ERROR_BAD_PARAMETERS;
 		goto out;
 	}
 
-	res = mbedTLS_import_rsa_pk(&subject_key, rsa_attest_key);
-	if (res) {
-		EMSG("mbedTLS_import_rsa_pk: failed: %#x", res);
-		goto out;
-	}
-
-	ret = mbedtls_x509_dn_gets( cert_subject_rsa, sizeof(cert_subject_rsa)-1, &cert->subject );
-	if ( ret < 0) {
+	ret = mbedtls_x509_dn_gets(cert_subject, sizeof(cert_subject) - 1,
+				   &cert->subject);
+	if (ret < 0) {
 		EMSG("mbedtls_x509_dn_gets: failed: -%#x", -ret);
 		res = TEE_ERROR_SHORT_BUFFER;
 		goto out;
 	}
 
+	res = (alg == KM_ALGORITHM_RSA) ?
+		mbedTLS_import_rsa_pk(&issuer_key, root_key) :
+		mbedTLS_import_ecc_pk(&issuer_key, root_key);
+	if (res) {
+		EMSG("mbedTLS_import_rsa_pk: failed: %#x", res);
+		goto out;
+	}
+
+	res = (alg == KM_ALGORITHM_RSA) ?
+		mbedTLS_import_rsa_pk(&subject_key, attest_key) :
+		mbedTLS_import_ecc_pk(&subject_key, attest_key);
+	if (res) {
+		EMSG("mbedTLS_import_rsa_pk: failed: %#x", res);
+		goto out;
+	}
+
 	res = mbedTLS_attest_key_cert(&issuer_key, &subject_key,
-				key_usage,rsa_attest_cert, attest_ext, cert_subject_rsa );
+				      key_usage, attest_cert,
+				      attest_ext, cert_subject);
 	if (res) {
 		EMSG("mbedTLS_attest_key_cert: failed: %#x", res);
 		goto out;
 	}
 out:
+
 	mbedtls_pk_free(&issuer_key);
 	mbedtls_pk_free(&subject_key);
-    mbedtls_x509_crt_free( cert );
-    TEE_Free( cert );
+	mbedtls_x509_crt_free(cert);
+	TEE_Free( cert );
 
 	return res;
-}
 
-TEE_Result mbedTLS_gen_attest_key_cert_ecc(TEE_ObjectHandle ecc_root_key,
-					   	TEE_ObjectHandle ecc_attest_key,
-						unsigned int key_usage,
-						keymaster_cert_chain_t *cert_chain,
-						keymaster_blob_t *attest_ext)
-{
-	int ret;
-	TEE_Result res = TEE_SUCCESS;
-	keymaster_blob_t *ecc_attest_cert = &cert_chain->entries[KEY_ATT_CERT_INDEX];
-	mbedtls_pk_context issuer_key = {NULL,NULL};
-	mbedtls_pk_context subject_key = {NULL,NULL};
-	mbedtls_x509_crt *cert = NULL;
-   	char cert_subject_ecc[1024];
-    const unsigned char *p = (unsigned char*)cert_chain->entries[ROOT_ATT_CERT_INDEX].data;
-    size_t cert_len = cert_chain->entries[ROOT_ATT_CERT_INDEX].data_length;
-
-	DMSG("%s %d", __func__, __LINE__);
-
-    cert = (mbedtls_x509_crt*)TEE_Malloc( sizeof( mbedtls_x509_crt ), TEE_MALLOC_FILL_ZERO );
-    if( cert == NULL )
-        return TEE_ERROR_OUT_OF_MEMORY;
-
-    mbedtls_x509_crt_init( cert );
-
-	DMSG("root certificate: \n");
-	DHEXDUMP(p,cert_len);
-
-    if( ( mbedtls_x509_crt_parse_der( cert,
-                                            p, cert_len ) ) != 0 )
-    {
-		EMSG("mbedtls_x509_crt_parse_der: failed");
-        res = TEE_ERROR_BAD_PARAMETERS;
-    	goto out;
-    }
-
-	res = mbedTLS_import_ecc_pk(&issuer_key, ecc_root_key);
-	if (res) {
-		EMSG("mbedTLS_import_ecc_pk issuer_key: failed: %#x", res);
-		return res;
-	}
-
-	res = mbedTLS_import_ecc_pk(&subject_key, ecc_attest_key);
-	if (res) {
-		EMSG("mbedTLS_import_ecc_pk subject_key: failed: %#x", res);
-		return res;
-	}
-
-	ret = mbedtls_x509_dn_gets( cert_subject_ecc, sizeof(cert_subject_ecc)-1, &cert->subject );
-	if ( ret < 0) {
-		EMSG("mbedtls_x509_dn_gets: failed: -%#x", -ret);
-		res = TEE_ERROR_SHORT_BUFFER;
-		goto out;
-	}
-
-	res = mbedTLS_attest_key_cert(&issuer_key, &subject_key,
-				key_usage,ecc_attest_cert, attest_ext, cert_subject_ecc );
-	if (res) {
-		EMSG("mbedTLS_attest_key_cert: failed: %#x", res);
-		goto out;
-	}
-out:
-	mbedtls_pk_free(&issuer_key);
-	mbedtls_pk_free(&subject_key);
-    mbedtls_x509_crt_free( cert );
-    TEE_Free( cert );
-
-	return res;
 }
 
 keymaster_error_t mbedTLS_encode_ec_sign(uint8_t *out, uint32_t *out_l) {
