@@ -18,7 +18,23 @@
 #ifndef MBEDTLS_PROXY_H_
 #define MBEDTLS_PROXY_H_
 
+#include <tee_internal_api.h>
+#include <tee_internal_api_extensions.h>
+#include <utee_defines.h>
+
 #include "ta_ca_defs.h"
+#include "generator.h"
+
+#define CMD_ASN1_DECODE 0
+#define CMD_ASN1_ENCODE_PUBKEY 1
+#define CMD_EC_SIGN_ENCODE 2
+#define CMD_EC_SIGN_DECODE 3
+#define CMD_ASN1_GEN_ROOT_RSA_CERT 4
+#define CMD_ASN1_GEN_ROOT_EC_CERT 5
+#define CMD_ASN1_GEN_ATT_RSA_CERT 6
+#define CMD_ASN1_GEN_ATT_EC_CERT 7
+#define CMD_ASN1_GEN_ATT_EXTENSION 8
+
 
 keymaster_error_t mbedTLS_decode_pkcs8(keymaster_blob_t key_data,
 				       TEE_Attribute **attrs,
@@ -51,5 +67,12 @@ keymaster_error_t mbedTLS_encode_ec_sign(uint8_t *out, uint32_t *out_l);
 
 keymaster_error_t mbedTLS_decode_ec_sign(keymaster_blob_t *sig,
 					 uint32_t key_size);
+
+TEE_Result TA_gen_attest_cert(TEE_ObjectHandle attestedKey,
+                              keymaster_key_param_set_t *attest_params,
+                              keymaster_key_characteristics_t *key_chr,
+                              uint8_t verified_boot,
+                              keymaster_algorithm_t alg,
+                              keymaster_cert_chain_t *cert_chain);
 
 #endif /* MBEDTLS_PROXY_H_ */

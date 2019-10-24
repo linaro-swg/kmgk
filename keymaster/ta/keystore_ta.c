@@ -879,7 +879,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 		goto exit;
 	}
 	//Generate key attestation certificate (using STA ASN.1)
-	result = TA_gen_key_attest_cert(sessionSTA, key_type, attestedKey,
+	result = TA_gen_key_attest_cert(key_type, attestedKey,
 				     &attest_params, &key_chr, &cert_chain,
 				     verified_boot_state);
 	if (result != TEE_SUCCESS) {
