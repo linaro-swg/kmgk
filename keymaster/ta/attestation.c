@@ -17,7 +17,7 @@
 
 #include "attestation.h"
 #include "generator.h"
-#include "asn1.h"
+#include "mbedtls_proxy.h"
 #include "crypto_aes.h"
 
 //Attestation root keys - RSA and EC
@@ -594,7 +594,7 @@ error_1:
 	return res;
 }
 
-static TEE_Result TA_create_root_rsa_attest_cert(TEE_TASessionHandle sessionSTA)
+static TEE_Result TA_create_root_rsa_attest_cert(void)
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle CertObject = TEE_HANDLE_NULL;
@@ -610,7 +610,7 @@ static TEE_Result TA_create_root_rsa_attest_cert(TEE_TASessionHandle sessionSTA)
 			goto error_1;
 		}
 		//Call ASN1 TA to generate root certificate
-		res = TA_gen_root_rsa_cert(sessionSTA, obj_h, &root_cert);
+		res = mbedTLS_gen_root_cert_rsa(obj_h, &root_cert);
 		if (res != TEE_SUCCESS) {
 			EMSG("Failed to generate RSA root certificate, res=%x", res);
 			goto error_2;
@@ -658,7 +658,7 @@ error_1:
 	return res;
 }
 
-static TEE_Result TA_create_root_ec_attest_cert(TEE_TASessionHandle sessionSTA)
+static TEE_Result TA_create_root_ec_attest_cert(void)
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle CertObject = TEE_HANDLE_NULL;
@@ -674,7 +674,7 @@ static TEE_Result TA_create_root_ec_attest_cert(TEE_TASessionHandle sessionSTA)
 			goto error_1;
 		}
 		//Call ASN1 TA to generate root certificate
-		res = TA_gen_root_ec_cert(sessionSTA, obj_h, &root_cert);
+		res = mbedTLS_gen_root_cert_ecc(obj_h, &root_cert);
 		if (res != TEE_SUCCESS) {
 			EMSG("Failed to generate EC root certificate, res=%x", res);
 			goto error_2;
@@ -761,7 +761,7 @@ error:
 	}
 }
 
-TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA, uint32_t type,
+TEE_Result TA_gen_key_attest_cert(uint32_t type,
 				  TEE_ObjectHandle attestedKey,
 				  keymaster_key_param_set_t *attest_params,
 				  keymaster_key_characteristics_t *key_chr,
@@ -771,13 +771,15 @@ TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA, uint32_t type,
 	TEE_Result res = TEE_SUCCESS;
 
 	if (type == TEE_TYPE_RSA_KEYPAIR) {
-		res = TA_gen_attest_rsa_cert(sessionSTA, attestedKey,
-					     attest_params, key_chr,
-					     cert_chain, verified_boot);
+		res = TA_gen_attest_cert(attestedKey,
+		                         attest_params, key_chr,
+		                         verified_boot, KM_ALGORITHM_RSA,
+		                         cert_chain);
 	} else if (type == TEE_TYPE_ECDSA_KEYPAIR) {
-		res = TA_gen_attest_ec_cert(sessionSTA, attestedKey,
-					    attest_params, key_chr,
-					    cert_chain, verified_boot);
+		res = TA_gen_attest_cert(attestedKey,
+		                         attest_params, key_chr,
+		                         verified_boot, KM_ALGORITHM_EC,
+		                         cert_chain);
 	} else {
 		res = TEE_ERROR_BAD_PARAMETERS;
 	}

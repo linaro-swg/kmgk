@@ -70,12 +70,12 @@ keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS]);
 
 keymaster_error_t TA_read_root_attest_cert(uint32_t type,
 		keymaster_cert_chain_t *cert_chain);
-TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA,
-		uint32_t type, TEE_ObjectHandle attestedKey,
-		keymaster_key_param_set_t *attest_params,
-		keymaster_key_characteristics_t *key_chr,
-		keymaster_cert_chain_t *cert_chain,
-		uint8_t verified_boot);
+TEE_Result TA_gen_key_attest_cert(uint32_t type,
+                TEE_ObjectHandle attestedKey,
+                keymaster_key_param_set_t *attest_params,
+                keymaster_key_characteristics_t *key_chr,
+                keymaster_cert_chain_t *cert_chain,
+                uint8_t verified_boot);
 
 TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA);
 
