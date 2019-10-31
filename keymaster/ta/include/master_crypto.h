@@ -22,6 +22,8 @@
 #define KEY_LENGTH 16
 #define TAG_SIZE 128U
 #define TAG_LENGTH 16
+#define IV_SIZE 96U
+#define IV_LENGTH 12
 
 #include <tee_internal_api.h>
 #include <tee_internal_api_extensions.h>
