@@ -21,7 +21,7 @@
 //and also used as HBK (hardware-bound private key) during attestation
 
 static uint8_t objID[] = {0xa7U, 0x62U, 0xcfU, 0x11U};
-static uint8_t iv[KEY_LENGTH];
+static uint8_t iv[IV_LENGTH];
 
 TEE_Result TA_open_secret_key(TEE_ObjectHandle *secretKey)
 {
@@ -53,7 +53,7 @@ TEE_Result TA_open_secret_key(TEE_ObjectHandle *secretKey)
 
 		//IV size is fixed
 		res = TEE_ReadObjectData(object, iv, sizeof(iv), &readSize);
-		if (res != TEE_SUCCESS || readSize != KEY_LENGTH) {
+		if (res != TEE_SUCCESS || readSize != IV_LENGTH) {
 			EMSG("Failed to read IV, res = %x", res);
 			goto close;
 		}
