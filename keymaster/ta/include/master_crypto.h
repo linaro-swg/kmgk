@@ -18,11 +18,8 @@
 #ifndef ANDROID_OPTEE_MASTER_CRYPTO_H
 #define ANDROID_OPTEE_MASTER_CRYPTO_H
 
-#define KEY_SIZE 128U
 #define KEY_LENGTH 16
-#define TAG_SIZE 128U
 #define TAG_LENGTH 16
-#define IV_SIZE 96U
 #define IV_LENGTH 12
 
 #include <tee_internal_api.h>

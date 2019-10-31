@@ -16,6 +16,7 @@
  */
 
 #include "master_crypto.h"
+#include "shift.h"
 
 //Master key for encryption/decryption of all CA's keys,
 //and also used as HBK (hardware-bound private key) during attestation
@@ -61,7 +62,8 @@ TEE_Result TA_open_secret_key(TEE_ObjectHandle *secretKey)
 		TEE_InitRefAttribute(&attrs[0], TEE_ATTR_SECRET_VALUE,
 				keyData, sizeof(keyData));
 
-		res = TEE_AllocateTransientObject(TEE_TYPE_AES, KEY_SIZE, &masterKey);
+		res = TEE_AllocateTransientObject(TEE_TYPE_AES,
+				KEY_LENGTH * BITS_IN_BYTE, &masterKey);
 		if (res == TEE_SUCCESS) {
 			res = TEE_PopulateTransientObject(masterKey, attrs,
 					sizeof(attrs)/sizeof(TEE_Attribute));
@@ -180,7 +182,7 @@ TEE_Result TA_execute(uint8_t *data, const size_t size, const uint32_t mode)
 		EMSG("Failed to set secret key, res=%x", res);
 		goto free_op;
 	}
-	TEE_AEInit(op, iv, sizeof(iv), TAG_SIZE, 0, 0);
+	TEE_AEInit(op, iv, sizeof(iv), TAG_LENGTH * BITS_IN_BYTE, 0, 0);
 	if (res == TEE_SUCCESS && size > 0) {
 		if (mode == TEE_MODE_ENCRYPT) {
 			DMSG("tagLen = %u", tagLen);
