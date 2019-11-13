@@ -792,7 +792,7 @@ TEE_Result TA_gen_key_attest_cert(uint32_t type,
 }
 
 #ifndef CFG_ATTESTATION_PROVISIONING
-TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA)
+TEE_Result TA_create_attest_objs(void)
 {
 	TEE_Result res = TEE_SUCCESS;
 
@@ -808,12 +808,12 @@ TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA)
 		EMSG("Something wrong with root EC key, res=%x", res);
 		return res;
 	}
-	res = TA_create_root_rsa_attest_cert(sessionSTA);
+	res = TA_create_root_rsa_attest_cert();
 	if (res != TEE_SUCCESS) {
 		EMSG("Something wrong with root RSA certificate, res=%x", res);
 		return res;
 	}
-	res = TA_create_root_ec_attest_cert(sessionSTA);
+	res = TA_create_root_ec_attest_cert();
 	if (res != TEE_SUCCESS) {
 		EMSG("Something wrong with root EC certificate, res=%x", res);
 		return res;

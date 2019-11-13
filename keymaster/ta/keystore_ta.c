@@ -24,7 +24,6 @@
 #include "keystore_ta.h"
 #include "attestation.h"
 
-static TEE_TASessionHandle sessionSTA = TEE_HANDLE_NULL;
 static TEE_TASessionHandle session_rngSTA = TEE_HANDLE_NULL;
 
 static tee_km_context_t optee_km_context;
@@ -40,7 +39,6 @@ TEE_Result TA_CreateEntryPoint(void)
 	TEE_Result	res = TEE_SUCCESS;
 	TEE_Param	params[TEE_NUM_PARAMS];
 
-	const TEE_UUID asn1_parser_uuid = ASN1_PARSER_UUID;
 	const TEE_UUID rng_entropy_uuid = PTA_SYSTEM_UUID /*RNG_ENTROPY_UUID*/;
 
 	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_NONE,
@@ -63,13 +61,6 @@ TEE_Result TA_CreateEntryPoint(void)
 		goto exit;
 	}
 
-	res = TEE_OpenTASession(&asn1_parser_uuid, TEE_TIMEOUT_INFINITE,
-			exp_param_types, params, &sessionSTA, NULL);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to create session with ASN.1 static TA (%x)", res);
-		goto exit;
-	}
-
 	res = TEE_OpenTASession(&rng_entropy_uuid, TEE_TIMEOUT_INFINITE,
 			exp_param_types, params, &session_rngSTA, NULL);
 	if (res != TEE_SUCCESS) {
@@ -85,9 +76,7 @@ void TA_DestroyEntryPoint(void)
 {
 	DMSG("%s %d", __func__, __LINE__);
 	TA_free_master_key();
-	TEE_CloseTASession(sessionSTA);
 	TEE_CloseTASession(session_rngSTA);
-	sessionSTA = TEE_HANDLE_NULL;
 	session_rngSTA = TEE_HANDLE_NULL;
 }
 
@@ -744,7 +733,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 
 #ifndef CFG_ATTESTATION_PROVISIONING
 	//This call creates keys/certs only once during first TA run
-	result = TA_create_attest_objs(sessionSTA);
+	result = TA_create_attest_objs();
 	if (result != TEE_SUCCESS) {
 		EMSG("Failed to create attestation objects, res=%x", result);
 		res = KM_ERROR_UNKNOWN_ERROR;
