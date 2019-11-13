@@ -77,7 +77,7 @@ TEE_Result TA_gen_key_attest_cert(uint32_t type,
                 keymaster_cert_chain_t *cert_chain,
                 uint8_t verified_boot);
 
-TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA);
+TEE_Result TA_create_attest_objs(void);
 
 void TA_close_attest_obj(TEE_ObjectHandle attObj);
 
