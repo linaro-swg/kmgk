@@ -64,28 +64,23 @@ TEE_Result TA_open_root_rsa_attest_cert(TEE_ObjectHandle *attCert);
 TEE_Result TA_open_root_ec_attest_cert(TEE_ObjectHandle *attCert);
 
 #ifdef CFG_ATTESTATION_PROVISIONING
-keymaster_error_t TA_SetAttestationKey(TEE_TASessionHandle sessionSTA, TEE_Param params[TEE_NUM_PARAMS]);
+keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS]);
 keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS]);
 #endif
 
 keymaster_error_t TA_read_root_attest_cert(uint32_t type,
 		keymaster_cert_chain_t *cert_chain);
-TEE_Result TA_gen_key_attest_cert(TEE_TASessionHandle sessionSTA,
-		uint32_t type, TEE_ObjectHandle attestedKey,
-		keymaster_key_param_set_t *attest_params,
-		keymaster_key_characteristics_t *key_chr,
-		keymaster_cert_chain_t *cert_chain,
-		uint8_t verified_boot);
+TEE_Result TA_gen_key_attest_cert(uint32_t type,
+                TEE_ObjectHandle attestedKey,
+                keymaster_key_param_set_t *attest_params,
+                keymaster_key_characteristics_t *key_chr,
+                keymaster_cert_chain_t *cert_chain,
+                uint8_t verified_boot);
 
-TEE_Result TA_create_attest_objs(TEE_TASessionHandle sessionSTA);
+TEE_Result TA_create_attest_objs(void);
 
 void TA_close_attest_obj(TEE_ObjectHandle attObj);
 
-TEE_Result TA_write_attest_obj_attr(TEE_ObjectHandle attObj,
-		const uint8_t *buffer, const uint32_t buffSize);
-
-TEE_Result TA_write_attest_cert(TEE_ObjectHandle attObj,
-		const uint8_t *buffer, const size_t buffSize);
 TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 						keymaster_cert_chain_t *cert_chain);
 

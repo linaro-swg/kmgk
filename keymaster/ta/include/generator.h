@@ -48,6 +48,15 @@
 #include "parsel.h"
 #include "parameters.h"
 
+typedef struct tee_key_attributes
+{
+	TEE_Attribute *attrs;
+	uint32_t attrs_count;
+	uint32_t size;
+	uint32_t type;
+	keymaster_algorithm_t alg;
+} tee_key_attributes;
+
 /* Operations with keys */
 keymaster_error_t TA_import_key(const keymaster_algorithm_t algorithm,
 				const uint32_t key_size,
@@ -87,7 +96,22 @@ keymaster_error_t TA_check_hmac_key_size(keymaster_blob_t *key_data,
 				uint32_t *key_size,
 				const keymaster_digest_t digest);
 
+keymaster_error_t TA_populate_key_attrs(uint8_t *key_material,
+					tee_key_attributes *att);
+
+keymaster_error_t TA_key_from_attrs(TEE_ObjectHandle *obj_h,
+				    const tee_key_attributes *attrs);
+
+keymaster_error_t TA_persistent_obj_from_attrs(TEE_ObjectHandle *obj_h,
+					       TEE_Attribute *attrs,
+					       uint32_t attrs_count,
+					       const uint8_t* id,
+					       uint32_t id_len);
+
 keymaster_error_t TA_check_hmac_key(const uint32_t type, uint32_t *key_size);
+
+TEE_Result TA_write_obj_attr(TEE_ObjectHandle attObj,
+			     const uint8_t *buffer, const uint32_t buffSize);
 
 bool is_attr_value(const uint32_t tag);
 

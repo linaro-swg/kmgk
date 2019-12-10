@@ -8,7 +8,6 @@ srcs-y += paddings.c
 srcs-y += parameters.c
 srcs-y += auth.c
 srcs-y += generator.c
-srcs-y += asn1.c
 srcs-y += crypto_aes.c
 srcs-y += crypto_rsa.c
 srcs-y += shift.c

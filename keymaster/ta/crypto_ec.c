@@ -16,6 +16,7 @@
  */
 
 #include "crypto_ec.h"
+#include "mbedtls_proxy.h"
 
 static keymaster_error_t TA_check_ec_data_size(uint8_t **data, uint32_t *data_l,
 				const uint32_t key_size, bool *clear_in_buf)
@@ -94,7 +95,6 @@ keymaster_error_t TA_ec_finish(const keymaster_operation_t *operation,
 				keymaster_blob_t *signature,
 				uint32_t *out_size,
 				const uint32_t key_size,
-				TEE_TASessionHandle *sessionSTA,
 				bool *is_input_ext)
 {
 	keymaster_error_t res = KM_ERROR_OK;
@@ -142,17 +142,17 @@ keymaster_error_t TA_ec_finish(const keymaster_operation_t *operation,
 							in_buf_l, output->data,
 							out_size);
 			if (res == TEE_SUCCESS && *out_size > 0) {
-				res = TA_encode_ec_sign(*sessionSTA,
-						output->data, out_size);
+				res = mbedTLS_encode_ec_sign(output->data,
+							     out_size);
 				if (res != KM_ERROR_OK) {
-					EMSG("Failed to encode EC sign, res=%x", res);
+					EMSG("Failed to encode EC sign, res=%x",
+					     res);
 					break;
 				}
 			}
 		} else {
 			*out_size = 0;
-			res = TA_decode_ec_sign(*sessionSTA, signature,
-								key_size);
+			res = mbedTLS_decode_ec_sign(signature, key_size);
 			if (res != KM_ERROR_OK) {
 				EMSG("Failed to decode EC sign, res=%x", res);
 				break;

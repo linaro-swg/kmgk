@@ -24,7 +24,6 @@
 #include "keystore_ta.h"
 #include "attestation.h"
 
-static TEE_TASessionHandle sessionSTA = TEE_HANDLE_NULL;
 static TEE_TASessionHandle session_rngSTA = TEE_HANDLE_NULL;
 
 static tee_km_context_t optee_km_context;
@@ -40,7 +39,6 @@ TEE_Result TA_CreateEntryPoint(void)
 	TEE_Result	res = TEE_SUCCESS;
 	TEE_Param	params[TEE_NUM_PARAMS];
 
-	const TEE_UUID asn1_parser_uuid = ASN1_PARSER_UUID;
 	const TEE_UUID rng_entropy_uuid = PTA_SYSTEM_UUID /*RNG_ENTROPY_UUID*/;
 
 	uint32_t exp_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_NONE,
@@ -63,13 +61,6 @@ TEE_Result TA_CreateEntryPoint(void)
 		goto exit;
 	}
 
-	res = TEE_OpenTASession(&asn1_parser_uuid, TEE_TIMEOUT_INFINITE,
-			exp_param_types, params, &sessionSTA, NULL);
-	if (res != TEE_SUCCESS) {
-		EMSG("Failed to create session with ASN.1 static TA (%x)", res);
-		goto exit;
-	}
-
 	res = TEE_OpenTASession(&rng_entropy_uuid, TEE_TIMEOUT_INFINITE,
 			exp_param_types, params, &session_rngSTA, NULL);
 	if (res != TEE_SUCCESS) {
@@ -85,9 +76,7 @@ void TA_DestroyEntryPoint(void)
 {
 	DMSG("%s %d", __func__, __LINE__);
 	TA_free_master_key();
-	TEE_CloseTASession(sessionSTA);
 	TEE_CloseTASession(session_rngSTA);
-	sessionSTA = TEE_HANDLE_NULL;
 	session_rngSTA = TEE_HANDLE_NULL;
 }
 
@@ -341,6 +330,7 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Failed to generate key, res=%x", res);
 		goto exit;
 	}
+
 	//TODO add bind keys to operating system and patch level version
 
 	TA_serialize_param_set(key_material + key_buffer_size, &params_t);
@@ -470,7 +460,6 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint32_t characts_size = 0;
 	uint32_t key_size = UNDEFINED;
 	uint32_t attrs_in_count = 0;
-	uint32_t curve = UNDEFINED;
 	uint64_t key_rsa_public_exponent = UNDEFINED;
 
 	DMSG("%s %d", __func__, __LINE__);
@@ -544,9 +533,11 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 			res = KM_ERROR_UNSUPPORTED_KEY_FORMAT;
 //			goto out;
 		}
-		res = TA_decode_pkcs8(sessionSTA, key_data, &attrs_in,
-				&attrs_in_count, key_algorithm, &key_size,
-				&key_rsa_public_exponent);
+
+		res = mbedTLS_decode_pkcs8(key_data, &attrs_in,
+					   &attrs_in_count, key_algorithm,
+					   &key_size, &key_rsa_public_exponent);
+
 		if (res != KM_ERROR_OK)
 			goto out;
 		if (key_algorithm == KM_ALGORITHM_RSA && (key_size % 8 != 0 ||
@@ -556,20 +547,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 			res = KM_ERROR_UNSUPPORTED_KEY_SIZE;
 			goto out;
 		}
-		if (key_algorithm == KM_ALGORITHM_EC) {
-			curve = TA_get_curve_nist(key_size);
-			if (curve == UNDEFINED) {
-				EMSG("Failed to get ECC curve nist");
-				res = KM_ERROR_UNSUPPORTED_EC_CURVE;
-				goto out;
-			}
-			TEE_InitValueAttribute(
-					attrs_in + attrs_in_count,
-					TEE_ATTR_ECC_CURVE,
-					curve,
-					0);
-			attrs_in_count++;
-		} else { /* KM_ALGORITHM_RSA */
+		if (key_algorithm == KM_ALGORITHM_RSA) {
 			if (key_size > MAX_KEY_RSA) {
 				EMSG("RSA key size must be multiple of 8 and less than %u",
 								MAX_KEY_RSA);
@@ -578,7 +556,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 			}
 		}
 	}
-	TA_add_to_params(&params_t, key_size, key_rsa_public_exponent, curve);
+	TA_add_to_params(&params_t, key_size, key_rsa_public_exponent);
 	res = TA_fill_characteristics(&characts,
 					&params_t, &characts_size);
 	if (res != KM_ERROR_OK)
@@ -691,7 +669,7 @@ static keymaster_error_t TA_exportKey(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("This key type is not exportable");
 		goto out;
 	}
-	res = TA_encode_key(sessionSTA, &export_data, type, &obj_h, key_size);
+	res = mbedTLS_encode_key(&export_data, type, &obj_h);
 	if (res != KM_ERROR_OK)
 		goto out;
 
@@ -755,7 +733,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 
 #ifndef CFG_ATTESTATION_PROVISIONING
 	//This call creates keys/certs only once during first TA run
-	result = TA_create_attest_objs(sessionSTA);
+	result = TA_create_attest_objs();
 	if (result != TEE_SUCCESS) {
 		EMSG("Failed to create attestation objects, res=%x", result);
 		res = KM_ERROR_UNKNOWN_ERROR;
@@ -890,7 +868,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 		goto exit;
 	}
 	//Generate key attestation certificate (using STA ASN.1)
-	result = TA_gen_key_attest_cert(sessionSTA, key_type, attestedKey,
+	result = TA_gen_key_attest_cert(key_type, attestedKey,
 				     &attest_params, &key_chr, &cert_chain,
 				     verified_boot_state);
 	if (result != TEE_SUCCESS) {
@@ -1381,8 +1359,7 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 		break;
 	case TEE_TYPE_ECDSA_KEYPAIR:
 		res = TA_ec_finish(&operation, &input, &output, &signature,
-					&out_size, key_size,
-					&sessionSTA, &is_input_ext);
+					&out_size, key_size, &is_input_ext);
 		break;
 	default: /* HMAC */
 		if (operation.purpose == KM_PURPOSE_SIGN) {
@@ -1530,7 +1507,7 @@ TEE_Result TA_InvokeCommandEntryPoint(void *sess_ctx __unused,
 	//Provisioning commands:
 	case KM_SET_ATTESTATION_KEY:
 		DMSG("KM_SET_ATTESTATION_KEY");
-		return TA_SetAttestationKey(sessionSTA,params);
+		return TA_SetAttestationKey(params);
 	case KM_APPEND_ATTESTATION_CERT_CHAIN:
 		DMSG("KM_APPEND_ATTESTATION_CERT_CHAIN");
 		return TA_AppendAttestationCertKey(params);
