@@ -230,6 +230,7 @@ static TEE_Result TA_set_ec_attest_key(keymaster_blob_t key_data)
 	uint32_t attrs_count = 0;
 	uint64_t key_rsa_public_exponent = UNDEFINED;
 	uint32_t key_size = UNDEFINED;
+	uint32_t curve = UNDEFINED;
 
 	DMSG("EC root attestation key creation...");
 
