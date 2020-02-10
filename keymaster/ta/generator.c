@@ -312,18 +312,18 @@ keymaster_error_t TA_generate_key(const keymaster_algorithm_t algorithm,
 					const uint64_t rsa_public_exponent)
 {
 	TEE_ObjectHandle obj_h = TEE_HANDLE_NULL;
-	TEE_Result res;
+	TEE_Result res = TEE_SUCCESS;
 	uint32_t padding = 0;
-	uint32_t *attributes;
-	uint32_t attr_count;
-	uint32_t attr_size;
-	uint32_t type;
-	uint32_t a;
-	uint32_t b;
-	uint32_t curve;
-	uint8_t buffer[KM_MAX_ATTR_SIZE];
+	uint32_t *attributes = NULL;
+	uint32_t attr_count = 0;
+	uint32_t attr_size = 0;
+	uint32_t type = 0;
+	uint32_t a = 0;
+	uint32_t b = 0;
+	uint32_t curve = UNDEFINED;
+	uint8_t buffer[KM_MAX_ATTR_SIZE] = { 0 };
 	uint8_t *buf_pe = NULL;
-	uint64_t be_pe;
+	uint64_t be_pe = 0;
 	TEE_Attribute *attrs_in = NULL;
 	uint32_t attrs_in_count = 0;
 
