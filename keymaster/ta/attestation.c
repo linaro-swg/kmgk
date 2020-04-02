@@ -275,12 +275,20 @@ static TEE_Result TA_set_ec_attest_key(keymaster_blob_t key_data)
 
 	for (uint32_t i = 0; i < attrs_count; i++) {
 		//Attributes are "Ref"
-		DMSG("attrs[i].attributeID 0x%08X size %d", attrs[i].attributeID, attrs[i].content.ref.length);
-		result = TA_write_obj_attr(ECobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
-		if (result != TEE_SUCCESS) {
-			EMSG("Failed to write EC attribute %x, res=%x",
-					attrs[i].attributeID, result);
-			goto error_3;
+		switch (attrs[i].attributeID) {
+		case TEE_ATTR_ECC_PUBLIC_VALUE_X:
+		case TEE_ATTR_ECC_PUBLIC_VALUE_Y:
+		case TEE_ATTR_ECC_PRIVATE_VALUE:
+			DMSG("attrs[i].attributeID 0x%08X size %d", attrs[i].attributeID, attrs[i].content.ref.length);
+			result = TA_write_obj_attr(ECobject, attrs[i].content.ref.buffer, attrs[i].content.ref.length);
+			if (result != TEE_SUCCESS) {
+				EMSG("Failed to write EC attribute %x, res=%x",
+						attrs[i].attributeID, result);
+				goto error_3;
+			}
+			break;
+		default:
+			break;
 		}
 	}
 error_3:
@@ -831,11 +839,11 @@ void TA_close_attest_obj(TEE_ObjectHandle attObj)
 	}
 }
 
-static unsigned long fetch_length(const unsigned char *in, unsigned long inlen)
+static uint32_t fetch_length(const uint8_t *in, uint32_t inlen)
 {
-   unsigned long x, z;
+   uint32_t x, z;
 
-   unsigned long data_offset = 0;
+   uint32_t data_offset = 0;
 
    if (in == NULL) {
       return 0xFFFFFFFF;
@@ -865,7 +873,7 @@ static unsigned long fetch_length(const unsigned char *in, unsigned long inlen)
    data_offset += x;
    z = 0;
    while (x--) {
-      z = (z<<8) | ((unsigned long)*in);
+      z = (z<<8) | ((uint32_t)*in);
       ++in;
    }
    return z+data_offset;
@@ -879,7 +887,7 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 	uint32_t actual_read = 0;
 	uint8_t* pBuf = NULL;
 	size_t nEntryCount = 1; // KEY_ATT_CERT_INDEX used for key attestation
-	size_t nCertLen = 0;
+	uint32_t nCertLen = 0;
 
 	if (cert_chain == NULL)
 		return TEE_ERROR_BAD_PARAMETERS;
@@ -899,8 +907,8 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 	//Read root certificate, index[n], length
 	while (info.dataPosition != info.dataSize)
 	{
-		res = TEE_ReadObjectData(attObj, &nCertLen, sizeof(size_t), &actual_read);
-		if (res != TEE_SUCCESS || actual_read != sizeof(size_t)) {
+		res = TEE_ReadObjectData(attObj, &nCertLen, sizeof(uint32_t), &actual_read);
+		if (res != TEE_SUCCESS || actual_read != sizeof(uint32_t)) {
 			EMSG("Failed to read root certificate length, res=%x", res);
 			return res;
 		}
@@ -941,8 +949,8 @@ TEE_Result TA_read_attest_cert(TEE_ObjectHandle attObj,
 	//Read root certificate, index[n], length
 	while (info.dataPosition != info.dataSize)
 	{
-		res = TEE_ReadObjectData(attObj, &nCertLen, sizeof(size_t), &actual_read);
-		if (res != TEE_SUCCESS || actual_read != sizeof(size_t)) {
+		res = TEE_ReadObjectData(attObj, &nCertLen, sizeof(uint32_t), &actual_read);
+		if (res != TEE_SUCCESS || actual_read != sizeof(uint32_t)) {
 			EMSG("Failed to read root certificate length, res=%x", res);
 			goto error;
 		}

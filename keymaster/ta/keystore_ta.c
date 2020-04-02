@@ -842,6 +842,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 
 	if (includeUniqueID == true) {
 		//TODO TA_generate_UniqueID(...);
+		IMSG("Unique id is missing");
 	}
 
 	//Read Root attestation certificate (must be generated and stored before)
