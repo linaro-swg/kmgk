@@ -72,6 +72,7 @@ TEE_Result TA_gen_attest_cert(TEE_ObjectHandle attestedKey,
                               keymaster_key_param_set_t *attest_params,
                               keymaster_key_characteristics_t *key_chr,
                               uint8_t verified_boot,
+                              bool includeUniqueID,
                               keymaster_algorithm_t alg,
                               keymaster_cert_chain_t *cert_chain);
 

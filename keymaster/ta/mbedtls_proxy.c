@@ -1987,6 +1987,7 @@ out:
 static keymaster_error_t mbedTLS_gen_att_extension(keymaster_key_characteristics_t *chr,
                                                    keymaster_key_param_set_t *attest_params,
                                                    uint8_t verified_boot,
+                                                   bool includeUniqueID,
                                                    keymaster_blob_t *ext) {
 	int ret = 0;
 	keymaster_blob_t challenge = EMPTY_BLOB;
@@ -2000,10 +2001,18 @@ static keymaster_error_t mbedTLS_gen_att_extension(keymaster_key_characteristics
 	                                               verified_boot, &p,
 	                                               start));
 
-	MBEDTLS_ASN1_CHK_ADD(len_ret,
-	                     mbedtls_asn1_write_octet_string(&p, start,
-	                                                         unique_id_stub,
-	                                                         sizeof(unique_id_stub)));
+	if (includeUniqueID)
+	{
+		MBEDTLS_ASN1_CHK_ADD(len_ret,
+		                     mbedtls_asn1_write_octet_string(&p, start,
+		                                                         unique_id_stub,
+		                                                         sizeof(unique_id_stub)));
+	} else {
+		MBEDTLS_ASN1_CHK_ADD(len_ret,
+		                     mbedtls_asn1_write_octet_string(&p, start,
+		                                                         unique_id_stub,
+		                                                         0));
+	}
 
 	if (get_params_by_tag(attest_params, KM_TAG_ATTESTATION_CHALLENGE,
 	                      &challenge)) {
@@ -2054,6 +2063,7 @@ TEE_Result TA_gen_attest_cert(TEE_ObjectHandle attestedKey,
                               keymaster_key_param_set_t *attest_params,
                               keymaster_key_characteristics_t *key_chr,
                               uint8_t verified_boot,
+                              bool includeUniqueID,
                               keymaster_algorithm_t alg,
                               keymaster_cert_chain_t *cert_chain)
 {
@@ -2076,7 +2086,7 @@ TEE_Result TA_gen_attest_cert(TEE_ObjectHandle attestedKey,
 	}
 
 	if (mbedTLS_gen_att_extension(key_chr, attest_params, verified_boot,
-	                              &attest_ext)) {
+	                              includeUniqueID, &attest_ext)) {
 		res = TEE_ERROR_GENERIC;
 		EMSG("Failed to generate attestation extension");
 		goto error_1;

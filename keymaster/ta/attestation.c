@@ -775,19 +775,22 @@ TEE_Result TA_gen_key_attest_cert(uint32_t type,
 				  keymaster_key_param_set_t *attest_params,
 				  keymaster_key_characteristics_t *key_chr,
 				  keymaster_cert_chain_t *cert_chain,
-				  uint8_t verified_boot)
+				  uint8_t verified_boot,
+				  bool includeUniqueID)
 {
 	TEE_Result res = TEE_SUCCESS;
 
 	if (type == TEE_TYPE_RSA_KEYPAIR) {
 		res = TA_gen_attest_cert(attestedKey,
 		                         attest_params, key_chr,
-		                         verified_boot, KM_ALGORITHM_RSA,
+		                         verified_boot, includeUniqueID,
+		                         KM_ALGORITHM_RSA,
 		                         cert_chain);
 	} else if (type == TEE_TYPE_ECDSA_KEYPAIR) {
 		res = TA_gen_attest_cert(attestedKey,
 		                         attest_params, key_chr,
-		                         verified_boot, KM_ALGORITHM_EC,
+		                         verified_boot, includeUniqueID,
+		                         KM_ALGORITHM_EC,
 		                         cert_chain);
 	} else {
 		res = TEE_ERROR_BAD_PARAMETERS;

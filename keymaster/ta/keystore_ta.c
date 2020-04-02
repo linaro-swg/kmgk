@@ -871,7 +871,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 	//Generate key attestation certificate (using STA ASN.1)
 	result = TA_gen_key_attest_cert(key_type, attestedKey,
 				     &attest_params, &key_chr, &cert_chain,
-				     verified_boot_state);
+				     verified_boot_state, includeUniqueID);
 	if (result != TEE_SUCCESS) {
 		EMSG("Failed to gen key att cert, res=%x", result);
 		res = KM_ERROR_UNKNOWN_ERROR;
