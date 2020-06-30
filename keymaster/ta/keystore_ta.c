@@ -731,6 +731,11 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 
 	DMSG("%s %d", __func__, __LINE__);
 
+	in = (uint8_t *) params[0].memref.buffer;
+	in_end = in + params[0].memref.size;
+	out = (uint8_t *) params[1].memref.buffer;
+	out_size = params[1].memref.size; //limited to 8192
+
 #ifndef CFG_ATTESTATION_PROVISIONING
 	//This call creates keys/certs only once during first TA run
 	result = TA_create_attest_objs();
@@ -740,11 +745,6 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 		goto exit;
 	}
 #endif
-
-	in = (uint8_t *) params[0].memref.buffer;
-	in_end = in + params[0].memref.size;
-	out = (uint8_t *) params[1].memref.buffer;
-	out_size = params[1].memref.size; //limited to 8192
 
 	//Key blob for which the attestation will be created
 
