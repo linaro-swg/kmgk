@@ -32,6 +32,7 @@
 #define MBEDTLS_ASN1_RAW_DATA 0
 #define KEYMASTER_VERSION 3
 #define ATTESTATION_VERSION 2
+#define TIME_STRLEN 15
 
 #define MBEDTLS_OID_ATTESTATION "\x2B\x06\x01\x04\x01\xD6\x79\x02\x01\x11"
 
@@ -154,11 +155,125 @@ static int mpi_to_att(TEE_Attribute *att, const mbedtls_mpi *mpi,
 
 	return 0;
 }
+
 /* Structure for conversion from mbedtls_mpi to TEE_Attribute */
 struct mpi_id {
 	uint32_t att_id;
 	mbedtls_mpi *mpi;
 };
+
+/*
+ * Adapted from
+ * https://github.com/sidsingh78/EPOCH-to-time-date-converter
+ */
+static keymaster_error_t convert_epoch_to_date_str(uint32_t sec,
+						   unsigned char *t_str,
+						   size_t t_strlen)
+{
+	static unsigned char month_days[12] = {31, 28, 31, 30, 31, 30, 31, 31,
+					       30, 31, 30, 31};
+	static unsigned char week_days[7] = {4, 5, 6, 0, 1, 2, 3};
+	/* Thu=4, Fri=5, Sat=6, Sun=0, Mon=1, Tue=2, Wed=3 */
+
+	unsigned char ntp_hour = 0;
+	unsigned char ntp_minute = 0;
+	unsigned char ntp_second = 0;
+	unsigned char ntp_week_day = 0;
+	unsigned char ntp_date = 0;
+	unsigned char ntp_month = 0;
+	unsigned char leap_days = 0;
+	unsigned char leap_year_ind = 0;
+
+	uint16_t temp_days = 0;
+
+	uint32_t epoch = sec;
+	uint32_t ntp_year = 0;
+	uint32_t days_since_epoch  = 0;
+	uint32_t day_of_year = 0;
+
+	uint32_t i = 0;
+
+	if (!t_str) {
+		EMSG("Invalid buffer!");
+		return KM_ERROR_UNEXPECTED_NULL_POINTER;
+	}
+
+	if (t_strlen < TIME_STRLEN) {
+		EMSG("Short buffer!");
+		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
+
+	/*
+	 * Add or subtract time zone here.
+	 * e.g. GMT +5:30 = +19800 seconds
+	 * epoch += 19800;
+	 */
+
+	ntp_second = epoch % 60;
+	epoch /= 60;
+	ntp_minute = epoch % 60;
+	epoch /= 60;
+	ntp_hour  = epoch % 24;
+	epoch /= 24;
+
+	/* number of days since epoch */
+	days_since_epoch = epoch;
+	/* Calculating WeekDay */
+	ntp_week_day = week_days[days_since_epoch % 7];
+
+	/* ball parking year, may not be accurate! */
+	ntp_year = 1970 + (days_since_epoch / 365);
+
+	/* Calculating number of leap days since epoch/1970 */
+	for (i = 1972; i < ntp_year; i += 4)
+		if (((i % 4 == 0) && (i % 100 != 0)) || (i % 400 == 0))
+			leap_days++;
+
+	/*
+	 * Calculating accurate current year by
+	 * (days_since_epoch - extra leap days)
+	 */
+	ntp_year = 1970 + ((days_since_epoch - leap_days) / 365);
+	day_of_year = ((days_since_epoch - leap_days) % 365) + 1;
+
+	if (((ntp_year % 4 == 0) && (ntp_year % 100 != 0)) ||
+	    (ntp_year % 400 == 0)) {
+		/* February = 29 days for leap years */
+		month_days[1] = 29;
+		/* if current year is leap, set indicator to 1 */
+		leap_year_ind = 1;
+	} else {
+		/* February = 28 days for non-leap years */
+		month_days[1] = 28;
+	}
+
+	/* calculating current Month */
+	for (ntp_month = 0; ntp_month <= 11; ntp_month++) {
+		if (day_of_year <= temp_days)
+			break;
+		temp_days = temp_days + month_days[ntp_month];
+	}
+
+	/* calculating current Date */
+	temp_days = temp_days - month_days[ntp_month-1];
+	ntp_date = day_of_year - temp_days;
+
+	memset(t_str, 0, TIME_STRLEN);
+	/*
+	 * snprintf appends a null char at the end so +1 to str len required
+	 * e.g. str len required for year is 4, so sprintf with size of 4+1=5
+	 * and str len required for hour is 2, so sprintf with size of 2+1=3
+	 */
+	snprintf((char *)t_str, 5, "%04u", ntp_year);
+	snprintf((char *)(t_str + 4), 3, "%02u", ntp_month);
+	snprintf((char *)(t_str + 6), 3, "%02u", ntp_date);
+	snprintf((char *)(t_str + 8), 3, "%02u", ntp_hour);
+	snprintf((char *)(t_str + 10), 3, "%02u", ntp_minute);
+	snprintf((char *)(t_str + 12), 3, "%02u", ntp_second);
+	DMSG("Date string: %s", t_str);
+
+	return KM_ERROR_OK;
+}
 
 /* Convert mbedtls_rsa_context* to TEE_Attributes array */
 static keymaster_error_t mbedtls_export_rsa(TEE_Attribute **attrs,
@@ -719,9 +834,12 @@ static TEE_Result mbedTLS_gen_root_cert(mbedtls_pk_context *issuer_key,
 					const char *cert_subject)
 {
 	unsigned char buf[CERT_ROOT_MAX_SIZE];
+	unsigned char dfl_not_before[TIME_STRLEN] = { 0 };
+	unsigned char dfl_not_after[TIME_STRLEN] = { 0 };
 	int blen = CERT_ROOT_MAX_SIZE;
 	int ret;
 	TEE_Result res = TEE_SUCCESS;
+	TEE_Time sys_t = { 0 };
 
 	mbedtls_mpi serial;
 	mbedtls_x509write_cert crt;
@@ -765,9 +883,29 @@ static TEE_Result mbedTLS_gen_root_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
-	// TODO: replace "19700101000000" with current time
-	ret = mbedtls_x509write_crt_set_validity(&crt, "19700101000000",
-						 "20301231235959");
+	TEE_GetSystemTime(&sys_t);
+	ret = convert_epoch_to_date_str(sys_t.seconds, dfl_not_before,
+					sizeof(dfl_not_before));
+	if (ret) {
+		EMSG("convert_epoch_to_date_str: failed: %#x", ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	/*
+	 * a cert is usually valid for 2 years (63072000 seconds)
+	 */
+	ret = convert_epoch_to_date_str(sys_t.seconds + 63072000,
+					dfl_not_after, sizeof(dfl_not_after));
+	if (ret) {
+		EMSG("convert_epoch_to_date_str: failed: %#x", ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_validity(&crt,
+						 (const char *)dfl_not_before,
+						 (const char *)dfl_not_after);
 	if (ret) {
 		EMSG("mbedtls_x509write_crt_set_validity: failed: -%#x", -ret);
 		res = TEE_ERROR_BAD_FORMAT;
@@ -968,9 +1106,13 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 					  char *cert_issuer)
 {
 	unsigned char buf[CERT_ROOT_MAX_SIZE];
+	unsigned char dfl_not_before[TIME_STRLEN] = { 0 };
+	unsigned char dfl_not_after[TIME_STRLEN] = { 0 };
+
 	int blen = CERT_ROOT_MAX_SIZE;
 	int ret;
 	TEE_Result res = TEE_SUCCESS;
+	TEE_Time sys_t = { 0 };
 
 	mbedtls_mpi serial;
 	mbedtls_x509write_cert crt;
@@ -1017,9 +1159,29 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
-	// TODO: replace "19700101000000" with current time
-	ret = mbedtls_x509write_crt_set_validity(&crt, "19700101000000",
-						 "20301231235959");
+	TEE_GetSystemTime(&sys_t);
+	ret = convert_epoch_to_date_str(sys_t.seconds, dfl_not_before,
+					sizeof(dfl_not_before));
+	if (ret) {
+		EMSG("convert_epoch_to_date_str: failed: %#x", ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	/*
+	 * a cert is usually valid for 2 years (63072000 seconds)
+	 */
+	ret = convert_epoch_to_date_str(sys_t.seconds + 63072000,
+					dfl_not_after, sizeof(dfl_not_after));
+	if (ret) {
+		EMSG("convert_epoch_to_date_str: failed: %#x", ret);
+		res = TEE_ERROR_BAD_FORMAT;
+		goto out;
+	}
+
+	ret = mbedtls_x509write_crt_set_validity(&crt,
+						 (const char *)dfl_not_before,
+						 (const char *)dfl_not_after);
 	if (ret) {
 		EMSG("mbedtls_x509write_crt_set_validity: failed: -%#x", -ret);
 		res = TEE_ERROR_BAD_FORMAT;
