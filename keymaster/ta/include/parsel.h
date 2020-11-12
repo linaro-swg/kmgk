@@ -34,8 +34,7 @@
 			   * KM_TAG_RSA_PUBLIC_EXPONENT)
 			   */
 
-#define IS_OUT_OF_BOUNDS(ptr, end, required) \
-			(end ? (ptr + required > end) : false)
+bool TA_is_out_of_bounds(uint8_t *in, uint8_t *in_end, size_t size);
 
 /* Serializers */
 int TA_serialize_rsp_err(uint8_t *out, const keymaster_error_t *error);

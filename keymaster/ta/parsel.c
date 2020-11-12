@@ -15,9 +15,26 @@
  * limitations under the License.
  */
 
+#include <stdint.h>
 #include "parsel.h"
 #include "attestation.h"
 #include "generator.h"
+#include "util.h"
+
+bool TA_is_out_of_bounds(uint8_t *ptr, uint8_t *end, size_t size)
+{
+	uintptr_t res = 0;
+
+	if (ADD_OVERFLOW((uintptr_t)ptr, size, &res)) {
+		EMSG("Pointer overflow detected - Abort!");
+		return true;
+	}
+	if (res > (uintptr_t)end) {
+		EMSG("Pointer out of bounds!");
+		return true;
+	}
+	return false;
+}
 
 /* Deserializers */
 int TA_deserialize_blob_akms(uint8_t *in, uint8_t *end,
@@ -33,7 +50,7 @@ int TA_deserialize_blob_akms(uint8_t *in, uint8_t *end,
 	DMSG("%s %d", __func__, __LINE__);
 	TEE_MemFill(blob, 0, sizeof(*blob));
 	if (check_presence) {
-		if (IS_OUT_OF_BOUNDS(in, end, sizeof(p))) {
+		if (TA_is_out_of_bounds(in, end, sizeof(p))) {
 			EMSG("Out of input array bounds on deserialization");
 			*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 			return in - start;
@@ -43,14 +60,14 @@ int TA_deserialize_blob_akms(uint8_t *in, uint8_t *end,
 	}
 	if (p == KM_NULL)
 		return sizeof(p);
-	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH_AKMS)) {
+	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return in - start;
 	}
 	TEE_MemMove(&blob->data_length, in, SIZE_LENGTH_AKMS);
 	in += SIZE_LENGTH_AKMS;
-	if (IS_OUT_OF_BOUNDS(in, end, blob->data_length)) {
+	if (TA_is_out_of_bounds(in, end, blob->data_length)) {
 		EMSG("Out of input array bounds on deserialization %lu", blob->data_length);
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return in - start;
@@ -166,7 +183,7 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 	DMSG("%s %d", __func__, __LINE__);
 	TEE_MemFill(param_set, 0, sizeof(*param_set));
 	if (check_presence) {
-		if (IS_OUT_OF_BOUNDS(in, end, sizeof(p))) {
+		if (TA_is_out_of_bounds(in, end, sizeof(p))) {
 			EMSG("Out of input array bounds on deserialization");
 			*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 			goto out;
@@ -178,7 +195,7 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 		goto out;
 
 	//Size of indirect_data_(uint32_t)
-	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH_AKMS)) {
+	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		goto out;
@@ -201,7 +218,7 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 	in += indirect_data_size;
 
 	//Number of elems_(uint32_t)
-	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH_AKMS)) {
+	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		goto out;
@@ -211,7 +228,7 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 	DMSG("elem cnt:%ld", param_set->length);
 
 	//Size of elems_(uint32_t)
-	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH_AKMS)) {
+	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		goto out;
@@ -255,7 +272,7 @@ int TA_deserialize_param_set(uint8_t *in, uint8_t *end,
 	DMSG("%s %d", __func__, __LINE__);
 	TEE_MemFill(params, 0, sizeof(*params));
 	if (check_presence) {
-		if (IS_OUT_OF_BOUNDS(in, end, sizeof(p))) {
+		if (TA_is_out_of_bounds(in, end, sizeof(p))) {
 			EMSG("Out of input array bounds on deserialization");
 			*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 			return in - start;
@@ -265,7 +282,7 @@ int TA_deserialize_param_set(uint8_t *in, uint8_t *end,
 	}
 	if (p == KM_NULL)
 		return in - start;
-	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH)) {
+	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return in - start;
@@ -286,7 +303,7 @@ int TA_deserialize_param_set(uint8_t *in, uint8_t *end,
 		return in - start;
 	}
 	for (size_t i = 0; i < params->length; i++) {
-		if (IS_OUT_OF_BOUNDS(in, end, SIZE_OF_ITEM(params->params))) {
+		if (TA_is_out_of_bounds(in, end, SIZE_OF_ITEM(params->params))) {
 			EMSG("Out of input array bounds on deserialization");
 			*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 			return in - start;
@@ -314,7 +331,7 @@ int TA_deserialize_key_blob_akms(uint8_t *in, uint8_t *end,
 	uint8_t *key_material;
 
 	DMSG("%s %d", __func__, __LINE__);
-	if (IS_OUT_OF_BOUNDS(in, end, SIZE_LENGTH_AKMS)) {
+	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return 0;
@@ -326,7 +343,7 @@ int TA_deserialize_key_blob_akms(uint8_t *in, uint8_t *end,
 			key_blob->key_material_size,
 			SIZE_LENGTH_AKMS);
 	in += SIZE_LENGTH_AKMS;
-	if (IS_OUT_OF_BOUNDS(in, end, key_blob->key_material_size)) {
+	if (TA_is_out_of_bounds(in, end, key_blob->key_material_size)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return SIZE_LENGTH_AKMS;
@@ -349,7 +366,7 @@ int TA_deserialize_op_handle(uint8_t *in, uint8_t *in_end,
 			keymaster_error_t *res)
 {
 	DMSG("%s %d", __func__, __LINE__);
-	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(*op_handle))) {
+	if (TA_is_out_of_bounds(in, in_end, sizeof(*op_handle))) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return 0;
@@ -363,7 +380,7 @@ int TA_deserialize_purpose(uint8_t *in, uint8_t *in_end,
 			keymaster_purpose_t *purpose, keymaster_error_t *res)
 {
 	DMSG("%s %d", __func__, __LINE__);
-	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(*purpose))) {
+	if (TA_is_out_of_bounds(in, in_end, sizeof(*purpose))) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return 0;
@@ -377,7 +394,7 @@ int TA_deserialize_key_format(uint8_t *in, uint8_t *in_end,
 			keymaster_error_t *res)
 {
 	DMSG("%s %d", __func__, __LINE__);
-	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(*key_format))) {
+	if (TA_is_out_of_bounds(in, in_end, sizeof(*key_format))) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return 0;
