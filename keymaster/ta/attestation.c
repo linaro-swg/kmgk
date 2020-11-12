@@ -1076,7 +1076,7 @@ keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
 	DMSG("%s %d", __func__, __LINE__);
 	if (in_size == 0)
 		return KM_ERROR_OK;
-	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(algorithm))) {
+	if (TA_is_out_of_bounds(in, in_end, sizeof(algorithm))) {
 		EMSG("Out of input array bounds on deserialization");
 		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
@@ -1131,7 +1131,7 @@ keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS])
 	DMSG("%s %d", __func__, __LINE__);
 	if (in_size == 0)
 		return KM_ERROR_OK;
-	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(algorithm))) {
+	if (TA_is_out_of_bounds(in, in_end, sizeof(algorithm))) {
 		EMSG("Out of input array bounds on deserialization");
 		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}

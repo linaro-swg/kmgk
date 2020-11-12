@@ -152,8 +152,9 @@ static keymaster_error_t TA_configure(TEE_Param params[TEE_NUM_PARAMS])
 
 	DMSG("%s %d", __func__, __LINE__);
 
-	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(optee_km_context.os_version) +
-								sizeof(optee_km_context.os_patchlevel))) {
+	if (TA_is_out_of_bounds(in, in_end,
+				sizeof(optee_km_context.os_version) +
+				sizeof(optee_km_context.os_patchlevel))) {
 		EMSG("Out of input array bounds on deserialization");
 		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
@@ -200,13 +201,13 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 	DMSG("%s %d", __func__, __LINE__);
 	if (in_size == 0)
 		return KM_ERROR_OK;
-	if (IS_OUT_OF_BOUNDS(in, in_end, sizeof(data_length))) {
+	if (TA_is_out_of_bounds(in, in_end, sizeof(data_length))) {
 		EMSG("Out of input array bounds on deserialization");
 		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
 	TEE_MemMove(&data_length, in, sizeof(data_length));
 	in += sizeof(data_length);
-	if (IS_OUT_OF_BOUNDS(in, in_end, data_length)) {
+	if (TA_is_out_of_bounds(in, in_end, data_length)) {
 		EMSG("Out of input array bounds on deserialization");
 		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
