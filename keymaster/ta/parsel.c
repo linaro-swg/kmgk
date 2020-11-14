@@ -179,6 +179,7 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 	uint32_t elem_serialized_size = 0;
 	uint8_t * indirect_base = NULL;
 	const uint8_t * indirect_end;
+	size_t num_params = 0;
 
 	DMSG("%s %d", __func__, __LINE__);
 	TEE_MemFill(param_set, 0, sizeof(*param_set));
@@ -237,13 +238,23 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 	in += SIZE_LENGTH_AKMS;
 	DMSG("elem serialized size:%d", elem_serialized_size);
 
-	/* Do +3 to params count to have memory for
+	if (param_set->length > MAX_ENFORCED_PARAMS_COUNT) {
+		EMSG("Number of key params requested exceeded max allowed "
+		     " (%u)!", MAX_ENFORCED_PARAMS_COUNT);
+		*res = KM_ERROR_INVALID_INPUT_LENGTH;
+		goto out;
+	}
+	/* Do +6 to params count to have memory for
 	 * adding KM_TAG_ORIGIN params and key size with RSA
 	 * public exponent on import
 	 */
-	param_set->params = TEE_Malloc(sizeof(keymaster_key_param_t)
-			* (param_set->length + ADDITIONAL_TAGS),
-			TEE_MALLOC_FILL_ZERO);
+	if (MUL_OVERFLOW(sizeof(keymaster_key_param_t), param_set->length +
+	    ADDITIONAL_TAGS, &num_params)) {
+		EMSG("Overflow: too many key params! Abort!");
+		*res = KM_ERROR_INVALID_INPUT_LENGTH;
+		goto out;
+	}
+	param_set->params = TEE_Malloc(num_params, TEE_MALLOC_FILL_ZERO);
 	/* Freed when deserialized params set is destroyed by caller */
 	if (!param_set->params) {
 		EMSG("Failed to allocate memory for params");
