@@ -216,6 +216,12 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 	DMSG("indirect_base:%p", indirect_base);
 	TEE_MemMove(indirect_base, in, indirect_data_size);
 	indirect_end = indirect_base + indirect_data_size;
+
+	if (TA_is_out_of_bounds(in, end, indirect_data_size)) {
+		EMSG("Out of input array bounds on deserialization");
+		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		goto out;
+	}
 	in += indirect_data_size;
 
 	//Number of elems_(uint32_t)
