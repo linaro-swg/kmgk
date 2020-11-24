@@ -2023,10 +2023,10 @@ static int write_authorization_lists(keymaster_key_characteristics_t *chr,
                                      keymaster_key_param_set_t *attest_params,
                                      uint8_t verified_boot, unsigned char**p,
                                      unsigned char *start) {
-	size_t i;
+	size_t i = 0;
 	asn1_sequence *sw_auth_seq = NULL, *hw_auth_seq = NULL;
-	bool is_hw;
-	int ret, len_ret = 0;
+	bool is_hw = true;
+	int ret = 0, len_ret = 0;
 
 	param_enforcement params [] = {
 		{ &chr->sw_enforced,  false },
@@ -2036,12 +2036,12 @@ static int write_authorization_lists(keymaster_key_characteristics_t *chr,
 
 	for (i = 0; i < sizeof(auth_tag_list) / sizeof(auth_tag_list[0]); i++) {
 		/* Buffers to store possible tag values */
-		bool bool_par;
-		uint32_t uint_par;
-		uint64_t long_par;
+		bool bool_par = true;
+		uint32_t uint_par = 0;
+		uint64_t long_par = 0;
 		uint32_t rep_par[REP_TAG_MAX_VALUES];
 		keymaster_blob_t blob_par = EMPTY_BLOB;
-		void *par_ptr;
+		void *par_ptr = NULL;
 
 		size_t par_count = 0;
 
