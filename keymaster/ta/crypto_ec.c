@@ -23,7 +23,6 @@ static keymaster_error_t TA_check_ec_data_size(uint8_t **data, uint32_t *data_l,
 {
 	keymaster_error_t res = KM_ERROR_OK;
 	uint32_t key_size_bytes = (key_size + 7) / 8;
-	uint8_t *ptr = NULL;
 
 	/*
 	 * If the data provided for signing
@@ -43,7 +42,7 @@ static keymaster_error_t TA_check_ec_data_size(uint8_t **data, uint32_t *data_l,
 				8 - (key_size & 0x7));
 		}
 	}
-out:
+
 	return res;
 }
 
