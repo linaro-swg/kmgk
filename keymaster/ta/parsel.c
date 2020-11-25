@@ -20,7 +20,7 @@
 #include "generator.h"
 
 /* Deserializers */
-int TA_deserialize_blob_akms(uint8_t *in, const uint8_t *end,
+int TA_deserialize_blob_akms(uint8_t *in, uint8_t *end,
 			keymaster_blob_t *blob,
 			const bool check_presence,
 			keymaster_error_t *res,
@@ -152,7 +152,7 @@ static bool param_deserialize(keymaster_key_param_t* param, uint8_t** buf_ptr, c
 }
 
 
-int TA_deserialize_auth_set(uint8_t *in, const uint8_t *end,
+int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 			keymaster_key_param_set_t *param_set,
 			const bool check_presence, keymaster_error_t *res)
 {
@@ -245,7 +245,7 @@ out:
 	return in - start;
 }
 
-int TA_deserialize_param_set(uint8_t *in, const uint8_t *end,
+int TA_deserialize_param_set(uint8_t *in, uint8_t *end,
 			keymaster_key_param_set_t *params,
 			const bool check_presence, keymaster_error_t *res)
 {
@@ -307,7 +307,7 @@ int TA_deserialize_param_set(uint8_t *in, const uint8_t *end,
 	return in - start;
 }
 
-int TA_deserialize_key_blob_akms(const uint8_t *in, const uint8_t *end,
+int TA_deserialize_key_blob_akms(uint8_t *in, uint8_t *end,
 			keymaster_key_blob_t *key_blob,
 			keymaster_error_t *res)
 {
@@ -344,7 +344,7 @@ int TA_deserialize_key_blob_akms(const uint8_t *in, const uint8_t *end,
 	return KEY_BLOB_SIZE_AKMS(key_blob);
 }
 
-int TA_deserialize_op_handle(const uint8_t *in, const uint8_t *in_end,
+int TA_deserialize_op_handle(uint8_t *in, uint8_t *in_end,
 			keymaster_operation_handle_t *op_handle,
 			keymaster_error_t *res)
 {
@@ -359,7 +359,7 @@ int TA_deserialize_op_handle(const uint8_t *in, const uint8_t *in_end,
 	return sizeof(*op_handle);
 }
 
-int TA_deserialize_purpose(const uint8_t *in, const uint8_t *in_end,
+int TA_deserialize_purpose(uint8_t *in, uint8_t *in_end,
 			keymaster_purpose_t *purpose, keymaster_error_t *res)
 {
 	DMSG("%s %d", __func__, __LINE__);
@@ -372,7 +372,7 @@ int TA_deserialize_purpose(const uint8_t *in, const uint8_t *in_end,
 	return sizeof(*purpose);
 }
 
-int TA_deserialize_key_format(const uint8_t *in, const uint8_t *in_end,
+int TA_deserialize_key_format(uint8_t *in, uint8_t *in_end,
 			keymaster_key_format_t *key_format,
 			keymaster_error_t *res)
 {
