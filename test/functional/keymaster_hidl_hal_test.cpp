@@ -18,7 +18,6 @@
 #include <cutils/log.h>
 
 #include <iostream>
-#include <unistd.h>
 
 #include <openssl/evp.h>
 #include <openssl/mem.h>
@@ -26,16 +25,14 @@
 
 #include <android/hardware/keymaster/3.0/IKeymasterDevice.h>
 #include <android/hardware/keymaster/3.0/types.h>
-
 #include <cutils/properties.h>
-
+#include <gtest/gtest.h>
+#include <hidl/GtestPrinter.h>
+#include <hidl/ServiceManagement.h>
 #include <keymaster/keymaster_configuration.h>
 
 #include "authorization_set.h"
 #include "key_param_output.h"
-
-#include <VtsHalHidlTargetTestBase.h>
-#include <VtsHalHidlTargetTestEnvBase.h>
 
 #include "attestation_record.h"
 #include "openssl_utils.h"
@@ -310,30 +307,14 @@ class HidlBuf : public hidl_vec<uint8_t> {
 
 }  // namespace
 
-// Test environment for Keymaster HIDL HAL.
-class KeymasterHidlEnvironment : public ::testing::VtsHalHidlTargetTestEnvBase {
-   public:
-    // get the test environment singleton
-    static KeymasterHidlEnvironment* Instance() {
-        static KeymasterHidlEnvironment* instance = new KeymasterHidlEnvironment;
-        return instance;
-    }
-
-    virtual void registerTestServices() override { registerTestService<IKeymasterDevice>(); }
-   private:
-    KeymasterHidlEnvironment() {}
-};
-
-class KeymasterTest : public ::testing::VtsHalHidlTargetTestBase {
+class KeymasterTest : public ::testing::TestWithParam<std::string> {
   public:
 
     void TearDown() override {
     }
 
-    // SetUpTestCase runs only once per test case, not once per test.
-    static void SetUpTestCase() {
-        keymaster_ = ::testing::VtsHalHidlTargetTestBase::getService<IKeymasterDevice>(
-            KeymasterHidlEnvironment::Instance()->getServiceName<IKeymasterDevice>());
+    void SetUp() override {
+        keymaster_ = IKeymasterDevice::getService(GetParam());
         ASSERT_NE(keymaster_, nullptr);
 
         ASSERT_TRUE(
@@ -352,8 +333,6 @@ class KeymasterTest : public ::testing::VtsHalHidlTargetTestBase {
                 })
                 .isOk());
     }
-
-    static void TearDownTestCase() { keymaster_.clear(); }
 
     AuthorizationSet UserAuths() { return AuthorizationSetBuilder().Authorization(TAG_USER_ID, 7); }
 
@@ -533,10 +512,8 @@ class KeymasterTest : public ::testing::VtsHalHidlTargetTestBase {
     }
 
 private:
-    static sp<IKeymasterDevice> keymaster_;
+    sp<IKeymasterDevice> keymaster_;
 };
-
-sp<IKeymasterDevice> KeymasterTest::keymaster_;
 
 class KeymasterTagTest : public KeymasterTest {
 public:
@@ -567,7 +544,7 @@ public:
     }
 };
 
-TEST_F(KeymasterTagTest, tag_MIN_SECONDS_BETWEEN_OPS) {
+TEST_P(KeymasterTagTest, tag_MIN_SECONDS_BETWEEN_OPS) {
     HidlBuf key_blobs[KM_MAX_USE_TIMERS + 1];
     KeyCharacteristics key_characteristics[KM_MAX_USE_TIMERS + 1];
     unsigned int seconds = 100;
@@ -602,7 +579,7 @@ TEST_F(KeymasterTagTest, tag_MIN_SECONDS_BETWEEN_OPS) {
  * This test requires TA restart after finish if keys with tag MAX_USES_PER_BOOT
  * are expected.
  */
-TEST_F(KeymasterTagTest, tag_MAX_USES_PER_BOOT) {
+TEST_P(KeymasterTagTest, tag_MAX_USES_PER_BOOT) {
     HidlBuf key_blobs[KM_MAX_USE_COUNTERS + 1];
     KeyCharacteristics key_characteristics[KM_MAX_USE_COUNTERS + 1];
     unsigned int max_uses = 5;
@@ -630,11 +607,15 @@ TEST_F(KeymasterTagTest, tag_MAX_USES_PER_BOOT) {
     ASSERT_EQ(ErrorCode::TOO_MANY_OPERATIONS, DefaultEcdsaSigningOperation(key_blobs[KM_MAX_USE_COUNTERS]));
 }
 
+static const auto kKeymasterDeviceChoices =
+        testing::ValuesIn(android::hardware::getAllHalInstanceNames(IKeymasterDevice::descriptor));
+
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(KeymasterTagTest);
+INSTANTIATE_TEST_SUITE_P(PerInstance, KeymasterTagTest, kKeymasterDeviceChoices,
+                         android::hardware::PrintInstanceNameToString);
+
 int main(int argc, char** argv) {
-    using android::hardware::keymaster::V3_0::test::KeymasterHidlEnvironment;
-    ::testing::AddGlobalTestEnvironment(KeymasterHidlEnvironment::Instance());
     ::testing::InitGoogleTest(&argc, argv);
-    KeymasterHidlEnvironment::Instance()->init(&argc, argv);
     for (int i = 1; i < argc; ++i) {
         if (argv[i][0] == '-') {
             if (std::string(argv[i]) == "--arm_deleteAllKeys") {
