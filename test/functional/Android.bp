@@ -31,4 +31,5 @@ cc_test {
     shared_libs: [
         "libcrypto",
     ],
+    test_suites: ["general-tests", "vts"],
 }
