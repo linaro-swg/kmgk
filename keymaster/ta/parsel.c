@@ -25,13 +25,19 @@ bool TA_is_out_of_bounds(uint8_t *ptr, uint8_t *end, size_t size)
 {
 	uintptr_t res = 0;
 
-	if (ADD_OVERFLOW((uintptr_t)ptr, size, &res)) {
-		EMSG("Pointer overflow detected - Abort!");
-		return true;
-	}
-	if (res > (uintptr_t)end) {
-		EMSG("Pointer out of bounds!");
-		return true;
+	if (end) {
+		if (ADD_OVERFLOW((uintptr_t)ptr, size, &res)) {
+			DMSG("ptr = 0x%x, end = 0x%x, size = %zu", ptr, end,
+			     size);
+			EMSG("Pointer overflow detected - Abort!");
+			return true;
+		}
+		if (res > (uintptr_t)end) {
+			DMSG("ptr = 0x%x, end = 0x%x, size = %zu", ptr, end,
+			     size);
+			EMSG("Pointer out of bounds!");
+			return true;
+		}
 	}
 	return false;
 }
