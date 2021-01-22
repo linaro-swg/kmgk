@@ -19,10 +19,10 @@
 #define LOG_TAG "wait_for_keymaster_optee"
 #include <android-base/logging.h>
 
-#include <keymasterV4_1/Keymaster.h>
+#include <keymasterV4_0/Keymaster.h>
 
-using android::hardware::keymaster::V4_1::SecurityLevel;
-using android::hardware::keymaster::V4_1::support::Keymaster;
+using android::hardware::keymaster::V4_0::SecurityLevel;
+using android::hardware::keymaster::V4_0::support::Keymaster;
 
 useconds_t kWaitTimeMicroseconds = 1000000;  // 1 second
 
