@@ -220,6 +220,7 @@ static keymaster_error_t convert_epoch_to_date_str(uint32_t sec,
 	days_since_epoch = epoch;
 	/* Calculating WeekDay */
 	ntp_week_day = week_days[days_since_epoch % 7];
+	DMSG("ntp_week_day = %u", ntp_week_day);
 
 	/* ball parking year, may not be accurate! */
 	ntp_year = 1970 + (days_since_epoch / 365);
@@ -242,6 +243,7 @@ static keymaster_error_t convert_epoch_to_date_str(uint32_t sec,
 		month_days[1] = 29;
 		/* if current year is leap, set indicator to 1 */
 		leap_year_ind = 1;
+		DMSG("leap_year_ind = %u", leap_year_ind);
 	} else {
 		/* February = 28 days for non-leap years */
 		month_days[1] = 28;
