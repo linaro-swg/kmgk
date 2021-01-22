@@ -377,6 +377,10 @@ keymaster_error_t TA_generate_key(const keymaster_algorithm_t algorithm,
 		}
 		be_pe = TEE_U64_TO_BIG_ENDIAN(rsa_public_exponent);
 		TEE_MemMove(buf_pe, &be_pe, sizeof(rsa_public_exponent));
+		DMSG("rsa_public_exponent = %lu 0x%lx", rsa_public_exponent,
+		     rsa_public_exponent);
+		DMSG("be_pe = %lu 0x%lx", be_pe, be_pe);
+		DHEXDUMP(buf_pe, sizeof(rsa_public_exponent));
 		TEE_InitRefAttribute(attrs_in,
 					TEE_ATTR_RSA_PUBLIC_EXPONENT,
 					(void *) buf_pe,
