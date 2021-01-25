@@ -272,6 +272,7 @@ static keymaster_error_t convert_epoch_to_date_str(uint32_t sec,
 	snprintf((char *)(t_str + 8), 3, "%02u", ntp_hour);
 	snprintf((char *)(t_str + 10), 3, "%02u", ntp_minute);
 	snprintf((char *)(t_str + 12), 3, "%02u", ntp_second);
+	DMSG("seconds since epoch: %" PRIu32, sec);
 	DMSG("Date string: %s", t_str);
 
 	return KM_ERROR_OK;
@@ -885,7 +886,17 @@ static TEE_Result mbedTLS_gen_root_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
-	TEE_GetSystemTime(&sys_t);
+	IMSG("########################################################");
+	IMSG("# CAUTION:");
+	IMSG("# REE time used for root cert generation!");
+	IMSG("# This is for development and testing ONLY!");
+	IMSG("# Platforms should define CFG_ATTESTATION_PROVISIONING");
+	IMSG("# and invoke the KM_SET_ATTESTATION_KEY and");
+	IMSG("# KM_APPEND_ATTESTATION_CERT_CHAIN commands to send a");
+	IMSG("# verified cert (chain) to secure persistent storage");
+	IMSG("# during provisioning!");
+	IMSG("########################################################");
+	TEE_GetREETime(&sys_t);
 	ret = convert_epoch_to_date_str(sys_t.seconds, dfl_not_before,
 					sizeof(dfl_not_before));
 	if (ret) {
@@ -1161,7 +1172,17 @@ static TEE_Result mbedTLS_attest_key_cert(mbedtls_pk_context *issuer_key,
 		goto out;
 	}
 
-	TEE_GetSystemTime(&sys_t);
+	IMSG("########################################################");
+	IMSG("# CAUTION:");
+	IMSG("# REE time used for attestation cert generation!");
+	IMSG("# This is for development and testing ONLY!");
+	IMSG("# Platforms should define CFG_ATTESTATION_PROVISIONING");
+	IMSG("# and invoke the KM_SET_ATTESTATION_KEY and");
+	IMSG("# KM_APPEND_ATTESTATION_CERT_CHAIN commands to send a");
+	IMSG("# verified cert (chain) to secure persistent storage");
+	IMSG("# during provisioning!");
+	IMSG("########################################################");
+	TEE_GetREETime(&sys_t);
 	ret = convert_epoch_to_date_str(sys_t.seconds, dfl_not_before,
 					sizeof(dfl_not_before));
 	if (ret) {
