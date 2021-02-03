@@ -345,13 +345,18 @@ int TA_deserialize_param_set(uint8_t *in, uint8_t *end,
 	}
 	if (p == KM_NULL)
 		return in - start;
-	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH)) {
+	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH_AKMS)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		return in - start;
 	}
 	TEE_MemMove(&params->length, in, sizeof(params->length));
-	in += SIZE_LENGTH;
+	EMSG("####################");
+	EMSG("sizeof(size_t) = %zu", sizeof(size_t));
+	EMSG("in = 0x%" PRIXPTR, (uintptr_t)in);
+	EMSG("####################");
+	in += SIZE_LENGTH_AKMS;
+	EMSG("in = 0x%" PRIXPTR, (uintptr_t)in);
 
 	DMSG("params->length:%zu", params->length);
 	if (params->length > MAX_ENFORCED_PARAMS_COUNT) {
@@ -758,7 +763,12 @@ int TA_serialize_characteristics(uint8_t *out, uint8_t *out_end,
 	}
 	TEE_MemMove(out, &characteristics->hw_enforced.length,
 		    sizeof(characteristics->hw_enforced.length));
-	out += SIZE_LENGTH;
+	EMSG("####################");
+	EMSG("sizeof(size_t) = %zu", sizeof(size_t));
+	EMSG("out = 0x%" PRIXPTR, (uintptr_t)out);
+	EMSG("####################");
+	out += SIZE_LENGTH_AKMS;
+	EMSG("out = 0x%" PRIXPTR, (uintptr_t)out);
 	for (size_t i = 0; i < characteristics->hw_enforced.length; i++) {
 		if (TA_is_out_of_bounds(out, out_end,
 			SIZE_OF_ITEM(characteristics->hw_enforced.params))) {
@@ -793,7 +803,12 @@ int TA_serialize_characteristics(uint8_t *out, uint8_t *out_end,
 	}
 	TEE_MemMove(out, &characteristics->sw_enforced.length,
 		    sizeof(characteristics->sw_enforced.length));
-	out += SIZE_LENGTH;
+	EMSG("####################");
+	EMSG("sizeof(size_t) = %zu", sizeof(size_t));
+	EMSG("out = 0x%" PRIXPTR, (uintptr_t)out);
+	EMSG("####################");
+	out += SIZE_LENGTH_AKMS;
+	EMSG("out = 0x%" PRIXPTR, (uintptr_t)out);
 	for (size_t i = 0; i < characteristics->sw_enforced.length; i++) {
 		if (TA_is_out_of_bounds(out, out_end,
 			SIZE_OF_ITEM(characteristics->sw_enforced.params))) {
