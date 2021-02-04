@@ -300,19 +300,14 @@ keymaster_error_t TA_fill_characteristics(
 		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
 	}
 	characteristics->sw_enforced.length = 0;
-	EMSG("####################");
-	EMSG("sizeof(size_t) = %zu", sizeof(size_t));
-	EMSG("*size = %" PRIu32, *size);
-	EMSG("####################");
-	*size = 2 * SIZE_LENGTH_AKMS; /* room of hw and sw size values */
-	EMSG("*size = %" PRIu32, *size);
+	*size = 2 * SIZE_LENGTH; /* room of hw and sw size values */
 
 	for (size_t i = 0; i < params->length; i++) {
 		*size += sizeof(params->params[i]);
 		if (keymaster_tag_get_type(params->params[i].tag) == KM_BIGNUM
 				|| keymaster_tag_get_type(params->
 				params[i].tag) == KM_BYTES) {
-			*size += SIZE_LENGTH_AKMS;
+			*size += SIZE_LENGTH;
 			*size += params->params[i].key_param.blob.data_length;
 		}
 
@@ -403,12 +398,7 @@ uint32_t TA_characteristics_size(
 	uint32_t size = 0;
 	DMSG("%s %d", __func__, __LINE__);
 
-	EMSG("####################");
-	EMSG("sizeof(size_t) = %zu", sizeof(size_t));
-	EMSG("size = %" PRIu32, size);
-	EMSG("####################");
-	size += SIZE_LENGTH_AKMS;
-	EMSG("size = %" PRIu32, size);
+	size += SIZE_LENGTH;
 	for (size_t i = 0; i < characteristics->hw_enforced.length; i++) {
 		size += SIZE_OF_ITEM(characteristics->hw_enforced.params);
 		if (keymaster_tag_get_type(characteristics->
@@ -420,12 +410,7 @@ uint32_t TA_characteristics_size(
 		}
 	}
 
-	EMSG("####################");
-	EMSG("sizeof(size_t) = %zu", sizeof(size_t));
-	EMSG("size = %" PRIu32, size);
-	EMSG("####################");
-	size += SIZE_LENGTH_AKMS;
-	EMSG("size = %" PRIu32, size);
+	size += SIZE_LENGTH;
 	for (size_t i = 0; i < characteristics->sw_enforced.length; i++) {
 		size += SIZE_OF_ITEM(characteristics->sw_enforced.params);
 		if (keymaster_tag_get_type(characteristics->
@@ -446,12 +431,7 @@ uint32_t TA_param_set_size(
 	uint32_t size = 0;
 	DMSG("%s %d", __func__, __LINE__);
 
-	EMSG("####################");
-	EMSG("sizeof(size_t) = %zu", sizeof(size_t));
-	EMSG("size = %" PRIu32, size);
-	EMSG("####################");
-	size += SIZE_LENGTH_AKMS;
-	EMSG("size = %" PRIu32, size);
+	size += SIZE_LENGTH;
 	for (size_t i = 0; i < params->length; i++) {
 		size += SIZE_OF_ITEM(params->params);
 
@@ -471,19 +451,9 @@ uint32_t TA_cert_chain_size(
 	uint32_t size = 0;
 	DMSG("%s %d", __func__, __LINE__);
 
-	EMSG("####################");
-	EMSG("sizeof(size_t) = %zu", sizeof(size_t));
-	EMSG("size = %" PRIu32, size);
-	EMSG("####################");
-	size += SIZE_LENGTH_AKMS;
-	EMSG("size = %" PRIu32, size);
+	size += SIZE_LENGTH;
 	for (size_t i = 0; i < cert_chain->entry_count; i++) {
-		EMSG("####################");
-		EMSG("sizeof(size_t) = %zu", sizeof(size_t));
-		EMSG("size = %" PRIu32, size);
-		EMSG("####################");
-		size += SIZE_LENGTH_AKMS;
-		EMSG("size = %" PRIu32, size);
+		size += SIZE_LENGTH;
 		size += cert_chain->entries[i].data_length;
 	}
 	return size;
