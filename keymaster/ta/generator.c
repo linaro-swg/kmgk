@@ -27,9 +27,6 @@ uint32_t attributes_rsa[KM_ATTR_COUNT_RSA] = {
 						TEE_ATTR_RSA_EXPONENT1,
 						TEE_ATTR_RSA_EXPONENT2,
 						TEE_ATTR_RSA_COEFFICIENT};
-// https://github.com/linaro-swg/kmgk/pull/9/commits/a82eb8df6079cd523cd811fd6f23d07b40486935#r284733434
-// TODO: check proper order of a EC key attributes
-// was curve, x, y, private
 uint32_t attributes_ec[KM_ATTR_COUNT_EC] = {
 						TEE_ATTR_ECC_CURVE,
 						TEE_ATTR_ECC_PRIVATE_VALUE,

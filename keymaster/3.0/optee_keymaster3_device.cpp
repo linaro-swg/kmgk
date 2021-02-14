@@ -58,12 +58,6 @@ static inline keymaster_tag_type_t typeFromTag(const keymaster_tag_t tag) {
     return keymaster_tag_get_type(tag);
 }
 
-/*
- * legacy_enum_conversion converts enums from hidl to keymaster and back. Currently, this is just a
- * cast to make the compiler happy. One of two things should happen though:
- * TODO The keymaster enums should become aliases for the hidl generated enums so that we have a
- *      single point of truth. Then this cast function can go away.
- */
 inline static keymaster_tag_t legacy_enum_conversion(const Tag value) {
     ALOGD("%s %d", __func__, __LINE__);
     return keymaster_tag_t(value);
