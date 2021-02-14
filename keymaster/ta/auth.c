@@ -32,7 +32,7 @@ TEE_Result TA_InitializeAuthTokenKey(void)
 {
 	TEE_Result res = TEE_SUCCESS;
 	TEE_ObjectHandle auth_token_key_obj = TEE_HANDLE_NULL;
-	uint8_t auth_token_key[HMAC_SHA256_KEY_SIZE_BYTE];
+	uint8_t auth_token_key[HMAC_SHA256_KEY_SIZE_BYTE] = { 0 };
 
 	DMSG("Checking auth_token key secret");
 
@@ -57,15 +57,14 @@ TEE_Result TA_InitializeAuthTokenKey(void)
 		res = TEE_WriteObjectData(auth_token_key_obj,
 				(void *)auth_token_key,
 				sizeof(auth_token_key));
+
+		/* erase auth_token_key from memory */
+		TEE_MemFill(auth_token_key, 0, sizeof(auth_token_key));
+
 		if (res != TEE_SUCCESS) {
 			EMSG("Failed to write auth_token key secret, res=%x", res);
 			goto close_obj;
 		}
-
-		/*
-		 * TODO add function that fill auth_token_key with
-		 * zeroes
-		 */
 
 		break;
 	case TEE_SUCCESS:
