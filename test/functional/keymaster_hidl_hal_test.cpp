@@ -322,14 +322,13 @@ class KeymasterTest : public ::testing::TestWithParam<std::string> {
                 ->getHardwareFeatures([&](bool isSecure, bool supportsEc, bool supportsSymmetric,
                                           bool supportsAttestation, bool supportsAllDigests,
                                           const hidl_string& name, const hidl_string& author) {
-                    //TODO: Add some initial check
-            (void)(isSecure);
-            (void)(supportsEc);
-            (void)(supportsSymmetric);
-            (void)(supportsAttestation);
-            (void)(supportsAllDigests);
-            (void)(name);
-            (void)(author);
+					ASSERT_TRUE(isSecure);
+					ASSERT_TRUE(supportsEc);
+					ASSERT_TRUE(supportsSymmetric);
+					ASSERT_TRUE(supportsAttestation);
+					ASSERT_TRUE(supportsAllDigests);
+					(void)(name);
+					(void)(author);
                 })
                 .isOk());
     }
