@@ -1059,15 +1059,15 @@ exit:
 }
 
 #ifdef CFG_ATTESTATION_PROVISIONING
-keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
+TEE_Result TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
 {
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	size_t  in_size = 0;
 	keymaster_blob_t input = EMPTY_BLOB;	/* IN */
-	keymaster_algorithm_t algorithm;			/* IN */
+	keymaster_algorithm_t algorithm = 0;	/* IN */
 	keymaster_error_t res = KM_ERROR_OK;
-	TEE_Result result;
+	TEE_Result result = TEE_SUCCESS;
 
 	in = (uint8_t *) params[0].memref.buffer;
 	in_size = (size_t) params[0].memref.size;
@@ -1075,23 +1075,25 @@ keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
 
 	DMSG("%s %d", __func__, __LINE__);
 	if (in_size == 0)
-		return KM_ERROR_OK;
+		return TEE_SUCCESS;
 	if (TA_is_out_of_bounds(in, in_end, sizeof(algorithm))) {
 		EMSG("Out of input array bounds on deserialization");
-		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		return TEE_ERROR_OVERFLOW;
 	}
 	TEE_MemMove(&algorithm, in, sizeof(algorithm));
 	in += sizeof(algorithm);
 	TA_deserialize_blob_akms(in, in_end, &input, false, &res, true);
-	if (res != KM_ERROR_OK)
+	if (res != KM_ERROR_OK) {
+		EMSG("Error parsing inputs!");
+		result = TEE_ERROR_BAD_FORMAT;
 		goto out;
+	}
 
     switch (algorithm) {
     case KM_ALGORITHM_RSA:
 		result = TA_set_rsa_attest_key(input);
 		if (result != TEE_SUCCESS) {
 			EMSG("Something wrong with root RSA key, res=%x", result);
-			/* TODO : convert TEE result in KM result */
 			res = KM_ERROR_UNKNOWN_ERROR;
 			break;
 		}
@@ -1100,29 +1102,30 @@ keymaster_error_t TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
 		result = TA_set_ec_attest_key(input);
 		if (result != TEE_SUCCESS) {
 			EMSG("Something wrong with root EC key, res=%x", result);
-			/* TODO : convert TEE result in KM result */
 			res = KM_ERROR_UNKNOWN_ERROR;
 			break;
 		}
         break;
     default:
-        res = KM_ERROR_UNSUPPORTED_ALGORITHM;
-        break;
+		EMSG("Unsupported algorithm! Only RSA and EC are supported.");
+		res = KM_ERROR_UNSUPPORTED_ALGORITHM;
+		result = TEE_ERROR_BAD_PARAMETERS;
+	break;
     }
 
 out:
-	return res;
+	return result;
 }
 
-keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS])
+TEE_Result TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS])
 {
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	size_t  in_size = 0;
 	keymaster_blob_t input = EMPTY_BLOB;	/* IN */
-	uint32_t algorithm;			/* IN */
+	keymaster_algorithm_t algorithm = 0;	/* IN */
 	keymaster_error_t res = KM_ERROR_OK;
-	TEE_Result result;
+	TEE_Result result = TEE_SUCCESS;
 
 	in = (uint8_t *) params[0].memref.buffer;
 	in_size = (size_t) params[0].memref.size;
@@ -1130,23 +1133,25 @@ keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS])
 
 	DMSG("%s %d", __func__, __LINE__);
 	if (in_size == 0)
-		return KM_ERROR_OK;
+		return TEE_SUCCESS;
 	if (TA_is_out_of_bounds(in, in_end, sizeof(algorithm))) {
 		EMSG("Out of input array bounds on deserialization");
-		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		return TEE_ERROR_OVERFLOW;
 	}
 	TEE_MemMove(&algorithm, in, sizeof(algorithm));
 	in += sizeof(algorithm);
 	TA_deserialize_blob_akms(in, in_end, &input, false, &res, true);
-	if (res != KM_ERROR_OK)
+	if (res != KM_ERROR_OK) {
+		EMSG("Error parsing inputs!");
+		result = TEE_ERROR_BAD_FORMAT;
 		goto out;
+	}
 
     switch (algorithm) {
     case KM_ALGORITHM_RSA:
 		result = TA_append_root_rsa_attest_cert(input);
 		if (result != TEE_SUCCESS) {
 			EMSG("Something wrong with root RSA certificate, res=%x", result);
-			/* TODO : convert TEE result in KM result */
 			res = KM_ERROR_UNKNOWN_ERROR;
 		}
         break;
@@ -1154,15 +1159,17 @@ keymaster_error_t TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS])
 		result = TA_append_root_ec_attest_cert(input);
 		if (result != TEE_SUCCESS) {
 			EMSG("Something wrong with root EC certificate, res=%x", result);
-			/* TODO : convert TEE result in KM result */
 			res = KM_ERROR_UNKNOWN_ERROR;
 		}
         break;
     default:
-        res = KM_ERROR_UNSUPPORTED_ALGORITHM;
+		EMSG("Unsupported algorithm! Only RSA and EC are supported.");
+		res = KM_ERROR_UNSUPPORTED_ALGORITHM;
+		result = TEE_ERROR_BAD_PARAMETERS;
+	break;
     }
 
 out:
-	return res;
+	return result;
 }
 #endif
