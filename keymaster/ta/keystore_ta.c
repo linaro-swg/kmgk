@@ -332,8 +332,6 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 		goto exit;
 	}
 
-	//TODO add bind keys to operating system and patch level version
-
 	TA_serialize_param_set(key_material + key_buffer_size, &params_t);
 
 	res = TA_encrypt(key_material, key_blob.key_material_size);
@@ -986,7 +984,6 @@ static keymaster_error_t TA_destroyAttestationIds(TEE_Param params[TEE_NUM_PARAM
 	out = (uint8_t *) params[1].memref.buffer;
 	out += TA_serialize_rsp_err(out, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
-	/* TODO Delete all keys */
 	return KM_ERROR_OK;
 }
 

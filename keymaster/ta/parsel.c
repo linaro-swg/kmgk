@@ -212,7 +212,6 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 	TEE_MemMove(&indirect_data_size, in, sizeof(indirect_data_size));
 	in += SIZE_LENGTH_AKMS;
 
-	//indirect_data_, todo
 	DMSG("indirect_data_size:%d", indirect_data_size);
 	/* Freed when deserialized blob is destroyed by caller */
 	indirect_base = TEE_Malloc(indirect_data_size, TEE_MALLOC_FILL_ZERO);

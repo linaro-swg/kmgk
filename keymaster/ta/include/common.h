@@ -18,7 +18,7 @@
 #ifndef KEYMASTER_COMMON_H
 #define KEYMASTER_COMMON_H
 
-#define SIZE_LENGTH sizeof(size_t) //TODO: find all of those macros and refactor them
+#define SIZE_LENGTH sizeof(size_t)
 /* AKMS stands for android keymaster serailzing function */
 #define SIZE_LENGTH_AKMS sizeof(uint32_t)
 
