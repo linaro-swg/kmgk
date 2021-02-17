@@ -47,9 +47,18 @@ keymaster_error_t mbedTLS_encode_key(keymaster_blob_t *export_data,
                                      const uint32_t type,
                                      const TEE_ObjectHandle *obj_h);
 
-// TODO: have a comment here saying something about the RSA
-// algorithm/schema in use or if there are any limitations. I.e, a
-// general description of what kind of root cert it generates.
+/*
+ * Here, we generate an X509 v3 cert using SHA-256 for the message digest.
+ * The validity of the cert will be 2 years from the current time.
+ * Since the TEE only provides relative time, we need to get the absolute time
+ * from the REE (number of seconds since epoch) in order to calculate the
+ * proper date string to provide to the MBEDTLS x509 APIs. This isn't fully
+ * secure, but this function is only used for development and testing.
+ * Platforms should define CFG_ATTESTATION_PROVISIONING and invoke the
+ * KM_SET_ATTESTATION_KEY and KM_APPEND_ATTESTATION_CERT_CHAIN commands to
+ * send a verified cert (chain) to secure persistent storage during
+ * provisioning!
+ */
 TEE_Result mbedTLS_gen_root_cert_rsa(TEE_ObjectHandle root_rsa_key,
 				      keymaster_blob_t *root_cert);
 
