@@ -253,9 +253,10 @@ keymaster_error_t optee_keymaster_call(uint32_t cmd,
 	      (int)rsp->error);
     } else if (res != KM_ERROR_OK) {
 	/*
-	 * rsp->error is KM_ERROR_OK but res isn't? The only time this happens
-	 * is in the case of param_types != exp_param_types in
-	 * TA_InvokeCommandEntryPoint() so res can't be serialized into rsp.
+	 * rsp->error is KM_ERROR_OK but res isn't? This happens when:
+	 * 1. param_types != exp_param_types in TA_InvokeCommandEntryPoint()
+	 * 2. req or rsp (in or out bufptr in keystore_ta.c) are NULL
+	 *    so res can't be serialized into rsp
 	 */
 	ALOGE("Response of size %d contained error code %d\n", (int)rsp_size,
 	      (int)res);
