@@ -1069,8 +1069,8 @@ TEE_Result TA_SetAttestationKey(TEE_Param params[TEE_NUM_PARAMS])
 	keymaster_error_t res = KM_ERROR_OK;
 	TEE_Result result = TEE_SUCCESS;
 
-	in = (uint8_t *) params[0].memref.buffer;
-	in_size = (size_t) params[0].memref.size;
+	in = (uint8_t *)params[0].memref.buffer;
+	in_size = (size_t)params[0].memref.size;
 	in_end = in + in_size;
 
 	DMSG("%s %d", __func__, __LINE__);
@@ -1127,8 +1127,8 @@ TEE_Result TA_AppendAttestationCertKey(TEE_Param params[TEE_NUM_PARAMS])
 	keymaster_error_t res = KM_ERROR_OK;
 	TEE_Result result = TEE_SUCCESS;
 
-	in = (uint8_t *) params[0].memref.buffer;
-	in_size = (size_t) params[0].memref.size;
+	in = (uint8_t *)params[0].memref.buffer;
+	in_size = (size_t)params[0].memref.size;
 	in_end = in + in_size;
 
 	DMSG("%s %d", __func__, __LINE__);
