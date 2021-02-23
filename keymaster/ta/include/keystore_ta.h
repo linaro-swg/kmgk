@@ -106,7 +106,8 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS]);
 
 static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS]);
 
-static keymaster_error_t TA_getKeyCharacteristics(TEE_Param params[TEE_NUM_PARAMS]);
+static keymaster_error_t TA_getKeyCharacteristics(
+					TEE_Param params[TEE_NUM_PARAMS]);
 
 static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS]);
 
@@ -120,7 +121,8 @@ static keymaster_error_t TA_deleteKey(TEE_Param params[TEE_NUM_PARAMS]);
 
 static keymaster_error_t TA_deleteAllKeys(TEE_Param params[TEE_NUM_PARAMS]);
 
-static keymaster_error_t TA_destroyAttestationIds(TEE_Param params[TEE_NUM_PARAMS]);
+static keymaster_error_t TA_destroyAttestationIds(
+					TEE_Param params[TEE_NUM_PARAMS]);
 
 static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS]);
 
@@ -129,4 +131,5 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS]);
 static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS]);
 
 static keymaster_error_t TA_abort(TEE_Param params[TEE_NUM_PARAMS]);
+
 #endif  /* ANDROID_OPTEE_KEYSTORE_TA_H */

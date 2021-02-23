@@ -282,9 +282,9 @@ keymaster_error_t TA_fill_characteristics(
 	DMSG("%s %d", __func__, __LINE__);
 	/* Freed before characteristics is destoyed by caller */
 	characteristics->hw_enforced.params = TEE_Malloc(
-					MAX_ENFORCED_PARAMS_COUNT *
-					sizeof(keymaster_key_param_t),
-					TEE_MALLOC_FILL_ZERO);
+						MAX_ENFORCED_PARAMS_COUNT *
+						sizeof(keymaster_key_param_t),
+						TEE_MALLOC_FILL_ZERO);
 	if (!characteristics->hw_enforced.params) {
 		EMSG("Failed to allocate memory for hw_enforced.params");
 		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
@@ -292,9 +292,9 @@ keymaster_error_t TA_fill_characteristics(
 	characteristics->hw_enforced.length = 0;
 	/* Freed before characteristics is destoyed by caller */
 	characteristics->sw_enforced.params = TEE_Malloc(
-					MAX_ENFORCED_PARAMS_COUNT *
-					sizeof(keymaster_key_param_t),
-					TEE_MALLOC_FILL_ZERO);
+						MAX_ENFORCED_PARAMS_COUNT *
+						sizeof(keymaster_key_param_t),
+						TEE_MALLOC_FILL_ZERO);
 	if (!characteristics->sw_enforced.params) {
 		EMSG("Failed to allocate memory for sw_enforced.params");
 		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
@@ -305,8 +305,8 @@ keymaster_error_t TA_fill_characteristics(
 	for (size_t i = 0; i < params->length; i++) {
 		*size += sizeof(params->params[i]);
 		if (keymaster_tag_get_type(params->params[i].tag) == KM_BIGNUM
-				|| keymaster_tag_get_type(params->
-				params[i].tag) == KM_BYTES) {
+		    || keymaster_tag_get_type(params->params[i].tag)
+		    == KM_BYTES) {
 			*size += SIZE_LENGTH;
 			*size += params->params[i].key_param.blob.data_length;
 		}
@@ -353,18 +353,17 @@ keymaster_error_t TA_fill_characteristics(
 		case KM_TAG_DIGEST:
 		case KM_TAG_OS_VERSION:
 		case KM_TAG_OS_PATCHLEVEL:
-			TA_push_param(&characteristics->
-				hw_enforced, params->params + i);
+			TA_push_param(&characteristics->hw_enforced,
+				      params->params + i);
 			break;
 		case KM_TAG_USER_AUTH_TYPE:
-			if ((hw_authenticator_type_t) params->params[i]
-						.key_param.enumerated ==
-						HW_AUTH_PASSWORD)
-				TA_push_param(&characteristics->
-					hw_enforced, params->params + i);
+			if ((hw_authenticator_type_t)params->params[i]
+			    .key_param.enumerated == HW_AUTH_PASSWORD)
+				TA_push_param(&characteristics->hw_enforced,
+					      params->params + i);
 			else
-				TA_push_param(&characteristics->
-					sw_enforced, params->params + i);
+				TA_push_param(&characteristics->sw_enforced,
+					      params->params + i);
 			break;
 		case KM_TAG_ACTIVE_DATETIME:
 		case KM_TAG_ORIGINATION_EXPIRE_DATETIME:
@@ -374,12 +373,12 @@ keymaster_error_t TA_fill_characteristics(
 		case KM_TAG_CREATION_DATETIME:
 		case KM_TAG_INCLUDE_UNIQUE_ID:
 		case KM_TAG_EXPORTABLE:
-			TA_push_param(&characteristics->
-				sw_enforced, params->params + i);
+			TA_push_param(&characteristics->sw_enforced,
+				      params->params + i);
 			break;
 		default:
 			DMSG("Unused parameter with TAG = %x",
-					params->params[i].tag);
+			     params->params[i].tag);
 			break;
 		}
 	}
