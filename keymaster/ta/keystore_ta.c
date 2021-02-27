@@ -160,7 +160,8 @@ static keymaster_error_t TA_configure(TEE_Param params[TEE_NUM_PARAMS])
 				sizeof(optee_km_context.os_version) +
 				sizeof(optee_km_context.os_patchlevel))) {
 		EMSG("Out of input array bounds on deserialization");
-		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		goto out;
 	}
 
 	/* parse parameters */
@@ -179,6 +180,7 @@ static keymaster_error_t TA_configure(TEE_Param params[TEE_NUM_PARAMS])
 		optee_km_context.version_info_set = true;
 	}
 
+out:
 	out += TA_serialize_rsp_err(out, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
@@ -208,21 +210,24 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 
 	DMSG("%s %d", __func__, __LINE__);
 	if (in_size == 0)
-		return KM_ERROR_OK;
+		goto out;
 	if (TA_is_out_of_bounds(in, in_end, sizeof(data_length))) {
 		EMSG("Out of input array bounds on deserialization");
-		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		goto out;
 	}
 	TEE_MemMove(&data_length, in, sizeof(data_length));
 	in += sizeof(data_length);
 	if (TA_is_out_of_bounds(in, in_end, data_length)) {
 		EMSG("Out of input array bounds on deserialization");
-		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		goto out;
 	}
 	data = TEE_Malloc(data_length, TEE_MALLOC_FILL_ZERO);
 	if (!data) {
 		EMSG("Failed to allocate memory for data");
-		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
+		res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
+		goto out;
 	}
 	/* oob check done before TEE_Malloc above */
 	TEE_MemMove(data, in, data_length);
@@ -1036,7 +1041,7 @@ static keymaster_error_t TA_destroyAttestationIds(
 	out = (uint8_t *)params[1].memref.buffer;
 	out += TA_serialize_rsp_err(out, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
-	return KM_ERROR_OK;
+	return res;
 }
 
 /*

@@ -251,7 +251,15 @@ keymaster_error_t optee_keymaster_call(uint32_t cmd,
     } else if (rsp->error != KM_ERROR_OK) {
 	ALOGE("Response of size %d contained error code %d\n", (int)rsp_size,
 	      (int)rsp->error);
-	return rsp->error;
+    } else if (res != KM_ERROR_OK) {
+	/*
+	 * rsp->error is KM_ERROR_OK but res isn't? The only time this happens
+	 * is in the case of param_types != exp_param_types in
+	 * TA_InvokeCommandEntryPoint() so res can't be serialized into rsp.
+	 */
+	ALOGE("Response of size %d contained error code %d\n", (int)rsp_size,
+	      (int)res);
+	return (keymaster_error_t)res;
     }
 
     return rsp->error;
