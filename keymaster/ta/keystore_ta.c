@@ -224,6 +224,7 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Failed to allocate memory for data");
 		return KM_ERROR_MEMORY_ALLOCATION_FAILED;
 	}
+	/* oob check done before TEE_Malloc above */
 	TEE_MemMove(data, in, data_length);
 	if (session_rngSTA == TEE_HANDLE_NULL) {
 		EMSG("Session with RNG static TA is not opened");
@@ -485,6 +486,12 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	if (res != KM_ERROR_OK)
 		goto out;
 	TA_add_origin(&params_t, KM_ORIGIN_IMPORTED, true);
+
+	if (TA_is_out_of_bounds(in, in_end, sizeof(key_format))) {
+		EMSG("Out of input array bounds on deserialization");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		goto out;
+	}
 	TEE_MemMove(&key_format, in, sizeof(key_format));
 	in += TA_deserialize_key_format(in, in_end, &key_format, &res);
 	if (res != KM_ERROR_OK)
