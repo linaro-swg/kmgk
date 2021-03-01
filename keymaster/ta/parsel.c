@@ -105,6 +105,10 @@ static bool param_deserialize(keymaster_key_param_t *param, uint8_t **buf_ptr,
 	uint8_t *data;
 
 	/* param_set tag */
+	if (TA_is_out_of_bounds(*buf_ptr, end, sizeof(param->tag))) {
+		EMSG("Out of input array bounds on deserialization");
+		return false;
+	}
 	TEE_MemMove(&param->tag, *buf_ptr, sizeof(param->tag));
 	*buf_ptr += sizeof(param->tag);
 
@@ -115,23 +119,43 @@ static bool param_deserialize(keymaster_key_param_t *param, uint8_t **buf_ptr,
 		return false;
 	case KM_ENUM:
 	case KM_ENUM_REP:
+		if (TA_is_out_of_bounds(*buf_ptr, end,
+					sizeof(param->key_param.enumerated))) {
+			EMSG("Out of input array bounds on deserialization");
+			return false;
+		}
 		TEE_MemMove(&param->key_param.enumerated, *buf_ptr,
 			    sizeof(param->key_param.enumerated));
 		*buf_ptr += sizeof(param->key_param.enumerated);
 		break;
 	case KM_UINT:
 	case KM_UINT_REP:
+		if (TA_is_out_of_bounds(*buf_ptr, end,
+					sizeof(param->key_param.integer))) {
+			EMSG("Out of input array bounds on deserialization");
+			return false;
+		}
 		TEE_MemMove(&param->key_param.integer, *buf_ptr,
 			    sizeof(param->key_param.integer));
 		*buf_ptr += sizeof(param->key_param.integer);
 		break;
 	case KM_ULONG:
 	case KM_ULONG_REP:
+		if (TA_is_out_of_bounds(*buf_ptr, end,
+					sizeof(param->key_param.long_integer))) {
+			EMSG("Out of input array bounds on deserialization");
+			return false;
+		}
 		TEE_MemMove(&param->key_param.long_integer, *buf_ptr,
 			    sizeof(param->key_param.long_integer));
 		*buf_ptr += sizeof(param->key_param.long_integer);
 		break;
 	case KM_DATE:
+		if (TA_is_out_of_bounds(*buf_ptr, end,
+					sizeof(param->key_param.date_time))) {
+			EMSG("Out of input array bounds on deserialization");
+			return false;
+		}
 		TEE_MemMove(&param->key_param.date_time, *buf_ptr,
 			    sizeof(param->key_param.date_time));
 		*buf_ptr += sizeof(param->key_param.date_time);
@@ -145,6 +169,11 @@ static bool param_deserialize(keymaster_key_param_t *param, uint8_t **buf_ptr,
 		return false;
 	case KM_BIGNUM:
 	case KM_BYTES:
+		if (TA_is_out_of_bounds(*buf_ptr, end, sizeof(uint32_t) +
+					sizeof(offset))) {
+			EMSG("Out of input array bounds on deserialization");
+			return false;
+		}
 		TEE_MemMove(&param->key_param.blob.data_length, *buf_ptr,
 			    sizeof(uint32_t));
 		*buf_ptr += sizeof(uint32_t);
@@ -211,7 +240,7 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 		goto out;
 
 	/* Size of indirect_data_(uint32_t) */
-	if (TA_is_out_of_bounds(in, end, SIZE_LENGTH_AKMS)) {
+	if (TA_is_out_of_bounds(in, end, sizeof(indirect_data_size))) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		goto out;
@@ -228,14 +257,14 @@ int TA_deserialize_auth_set(uint8_t *in, uint8_t *end,
 		goto out;
 	}
 	DMSG("indirect_base:%p", indirect_base);
-	TEE_MemMove(indirect_base, in, indirect_data_size);
-	indirect_end = indirect_base + indirect_data_size;
-
 	if (TA_is_out_of_bounds(in, end, indirect_data_size)) {
 		EMSG("Out of input array bounds on deserialization");
 		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 		goto out;
 	}
+	TEE_MemMove(indirect_base, in, indirect_data_size);
+	indirect_end = indirect_base + indirect_data_size;
+
 	in += indirect_data_size;
 
 	/* Number of elems_(uint32_t) */
