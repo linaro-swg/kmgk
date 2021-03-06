@@ -147,12 +147,16 @@ static keymaster_error_t TA_configure(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in_end = NULL;
 	size_t  in_size = 0;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
+	size_t out_size = 0;
 	keymaster_error_t res = KM_ERROR_OK;
 
 	in = (uint8_t *)params[0].memref.buffer;
 	in_size = (size_t)params[0].memref.size;
 	in_end = in + in_size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_size = (size_t)params[1].memref.size; /* limited to 8192 */
+	out_end = out + out_size;
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -186,7 +190,7 @@ static keymaster_error_t TA_configure(TEE_Param params[TEE_NUM_PARAMS])
 	}
 
 out:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	return res;
@@ -199,6 +203,8 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in_end = NULL;
 	size_t  in_size = 0;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
+	size_t out_size = 0;
 	uint8_t *data = NULL; /* IN */
 	uint32_t data_length = 0; /* IN */
 	uint32_t sta_param_types = TEE_PARAM_TYPES(TEE_PARAM_TYPE_MEMREF_INPUT,
@@ -212,6 +218,8 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 	in_size = (size_t)params[0].memref.size;
 	in_end = in + in_size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_size = (size_t)params[1].memref.size; /* limited to 8192 */
+	out_end = out + out_size;
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -257,7 +265,7 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 		goto out;
 	}
 out:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 	if (data)
 		TEE_Free(data);
@@ -273,6 +281,7 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	uint8_t *key_material = NULL;
 	keymaster_key_param_set_t params_t = EMPTY_PARAM_SET; /* IN */
 	keymaster_key_blob_t key_blob = EMPTY_KEY_BLOB; /* OUT */
@@ -290,6 +299,7 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -366,8 +376,9 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 		goto exit;
 	}
 
-	TA_serialize_param_set(key_material + key_buffer_size, &params_t);
-
+	TA_serialize_param_set(key_material + key_buffer_size,
+			       key_material + key_blob.key_material_size,
+			       &params_t);
 	res = TA_encrypt(key_material, key_blob.key_material_size);
 	if (res != KM_ERROR_OK) {
 		EMSG("Failed to encrypt key blob, res=%x", res);
@@ -376,10 +387,11 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 	key_blob.key_material = key_material;
 
 exit:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_key_blob_akms(out, &key_blob);
-		out += TA_serialize_characteristics_akms(out, &characts);
+		out += TA_serialize_key_blob_akms(out, out_end, &key_blob);
+		out += TA_serialize_characteristics_akms(out, out_end,
+							 &characts);
 	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 	if (key_material)
@@ -398,6 +410,7 @@ static keymaster_error_t TA_getKeyCharacteristics(
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	uint8_t *key_material = NULL;
 	keymaster_key_blob_t key_blob = EMPTY_KEY_BLOB; /* IN */
 	keymaster_blob_t client_id = EMPTY_BLOB; /* IN */
@@ -416,6 +429,7 @@ static keymaster_error_t TA_getKeyCharacteristics(
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -459,9 +473,9 @@ static keymaster_error_t TA_getKeyCharacteristics(
 		goto exit;
 
 exit:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK)
-		out += TA_serialize_characteristics_akms(out, &chr);
+		out += TA_serialize_characteristics_akms(out, out_end, &chr);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	if (obj_h != TEE_HANDLE_NULL)
@@ -487,6 +501,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_key_param_set_t params_t = EMPTY_PARAM_SET; /* IN */
 	keymaster_key_format_t key_format = UNDEFINED; /* IN */
 	keymaster_blob_t key_data = EMPTY_BLOB; /* IN */
@@ -508,6 +523,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -638,7 +654,9 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Failed to import key");
 		goto out;
 	}
-	TA_serialize_param_set(key_material + key_buffer_size, &params_t);
+	TA_serialize_param_set(key_material + key_buffer_size,
+			       key_material + key_blob.key_material_size,
+			       &params_t);
 	res = TA_encrypt(key_material, key_blob.key_material_size);
 	if (res != KM_ERROR_OK) {
 		EMSG("Failed to encrypt blob");
@@ -647,10 +665,11 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	key_blob.key_material = key_material;
 
 out:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_key_blob_akms(out, &key_blob);
-		out += TA_serialize_characteristics_akms(out, &characts);
+		out += TA_serialize_key_blob_akms(out, out_end, &key_blob);
+		out += TA_serialize_characteristics_akms(out, out_end,
+							 &characts);
 	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
@@ -676,6 +695,7 @@ static keymaster_error_t TA_exportKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_key_format_t export_format = UNDEFINED; /* IN */
 	keymaster_key_blob_t key_to_export = EMPTY_KEY_BLOB; /* IN */
 	keymaster_key_param_set_t in_params = EMPTY_PARAM_SET; /* IN */
@@ -693,6 +713,7 @@ static keymaster_error_t TA_exportKey(TEE_Param params[TEE_NUM_PARAMS])
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -746,9 +767,9 @@ static keymaster_error_t TA_exportKey(TEE_Param params[TEE_NUM_PARAMS])
 		goto out;
 
 out:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK)
-		out += TA_serialize_blob_akms(out, &export_data);
+		out += TA_serialize_blob_akms(out, out_end, &export_data);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	if (obj_h != TEE_HANDLE_NULL)
@@ -770,6 +791,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	uint32_t out_size = 0;
 	keymaster_key_blob_t key_to_attest = EMPTY_KEY_BLOB; /* IN */
 	keymaster_key_param_set_t attest_params = EMPTY_PARAM_SET; /* IN */
@@ -807,6 +829,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
 	out_size = params[1].memref.size; /* limited to 8192 */
+	out_end = out + out_size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -975,9 +998,10 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 
 exit:
 	/* Serialize output chain of certificates */
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_cert_chain_akms(out, &cert_chain, &res);
+		out += TA_serialize_cert_chain_akms(out, out_end, &cert_chain,
+						    &res);
 	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
@@ -1004,6 +1028,7 @@ static keymaster_error_t TA_upgradeKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_key_blob_t key_to_upgrade = EMPTY_KEY_BLOB; /* IN */
 	keymaster_key_param_set_t upgr_params = EMPTY_PARAM_SET; /* IN */
 	keymaster_key_blob_t upgraded_key = EMPTY_KEY_BLOB; /* OUT */
@@ -1014,6 +1039,7 @@ static keymaster_error_t TA_upgradeKey(TEE_Param params[TEE_NUM_PARAMS])
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -1030,9 +1056,9 @@ static keymaster_error_t TA_upgradeKey(TEE_Param params[TEE_NUM_PARAMS])
 
 out:
 	/* TODO Upgrade Key */
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK)
-		out += TA_serialize_key_blob_akms(out, &upgraded_key);
+		out += TA_serialize_key_blob_akms(out, out_end, &upgraded_key);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	TA_free_params(&upgr_params);
@@ -1045,16 +1071,18 @@ out:
 static keymaster_error_t TA_deleteKey(TEE_Param params[TEE_NUM_PARAMS])
 {
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_error_t res = KM_ERROR_OK;
 
 	DMSG("%s %d", __func__, __LINE__);
 
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 	if (!out) {
 		EMSG("Unexpected null pointer");
 		return KM_ERROR_UNEXPECTED_NULL_POINTER;
 	}
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	return res;
@@ -1064,16 +1092,18 @@ static keymaster_error_t TA_deleteKey(TEE_Param params[TEE_NUM_PARAMS])
 static keymaster_error_t TA_deleteAllKeys(TEE_Param params[TEE_NUM_PARAMS])
 {
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_error_t res = KM_ERROR_OK;
 
 	DMSG("%s %d", __func__, __LINE__);
 
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 	if (!out) {
 		EMSG("Unexpected null pointer");
 		return KM_ERROR_UNEXPECTED_NULL_POINTER;
 	}
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	return res;
@@ -1084,16 +1114,18 @@ static keymaster_error_t TA_destroyAttestationIds(
 					TEE_Param params[TEE_NUM_PARAMS])
 {
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_error_t res = KM_ERROR_OK;
 
 	DMSG("%s %d", __func__, __LINE__);
 
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 	if (!out) {
 		EMSG("Unexpected null pointer");
 		return KM_ERROR_UNEXPECTED_NULL_POINTER;
 	}
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 	return res;
 }
@@ -1109,6 +1141,7 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	uint8_t *key_material = NULL;
 	uint8_t *secretIV = NULL;
 	uint32_t mac_length = UNDEFINED;
@@ -1140,6 +1173,7 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -1252,11 +1286,11 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 		goto out;
 
 out:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK) {
 		TEE_MemMove(out, &operation_handle, sizeof(operation_handle));
 		out += sizeof(operation_handle);
-		out += TA_serialize_auth_set(out, &out_params);
+		out += TA_serialize_auth_set(out, out_end, &out_params);
 	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
@@ -1286,6 +1320,7 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_operation_handle_t operation_handle = 0; /* IN */
 	keymaster_key_param_set_t in_params = EMPTY_PARAM_SET; /* IN */
 	keymaster_blob_t input = EMPTY_BLOB; /* IN */
@@ -1308,6 +1343,7 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS])
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -1377,12 +1413,12 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS])
 	}
 
 out:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_blob_akms(out, &output);
+		out += TA_serialize_blob_akms(out, out_end, &output);
 		TEE_MemMove(out, &input_consumed, SIZE_LENGTH_AKMS);
 		out += SIZE_LENGTH_AKMS;
-		out += TA_serialize_auth_set(out, &out_params);
+		out += TA_serialize_auth_set(out, out_end, &out_params);
 		TA_update_operation(operation_handle, &operation);
 	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
@@ -1412,6 +1448,7 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_operation_handle_t operation_handle = 0; /* IN */
 	keymaster_key_param_set_t in_params = EMPTY_PARAM_SET; /* IN */
 	keymaster_blob_t input = EMPTY_BLOB; /* IN */
@@ -1434,6 +1471,7 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -1525,10 +1563,10 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 	output.data_length = out_size;
 
 out:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_blob_akms(out, &output);
-		out += TA_serialize_auth_set(out, &out_params);
+		out += TA_serialize_blob_akms(out, out_end, &output);
+		out += TA_serialize_auth_set(out, out_end, &out_params);
 	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
@@ -1555,6 +1593,7 @@ static keymaster_error_t TA_abort(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *in = NULL;
 	uint8_t *in_end = NULL;
 	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
 	keymaster_error_t res = KM_ERROR_OK;
 	keymaster_operation_handle_t operation_handle = 0; /* IN */
 
@@ -1563,6 +1602,7 @@ static keymaster_error_t TA_abort(TEE_Param params[TEE_NUM_PARAMS])
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
 	out = (uint8_t *)params[1].memref.buffer;
+	out_end = out + params[1].memref.size;
 
 	if (!in || !out) {
 		EMSG("Unexpected null pointer");
@@ -1574,7 +1614,7 @@ static keymaster_error_t TA_abort(TEE_Param params[TEE_NUM_PARAMS])
 		goto out;
 	res = TA_abort_operation(operation_handle);
 out:
-	out += TA_serialize_rsp_err(out, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 	return res;
 }

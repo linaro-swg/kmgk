@@ -37,32 +37,36 @@
 bool TA_is_out_of_bounds(uint8_t *in, uint8_t *in_end, size_t size);
 
 /* Serializers */
-int TA_serialize_rsp_err(uint8_t *out, const keymaster_error_t *error);
+int TA_serialize_rsp_err(uint8_t *out, uint8_t *out_end,
+			 const keymaster_error_t *error);
 
-int TA_serialize_blob_akms(uint8_t *out, const keymaster_blob_t *blob);
+int TA_serialize_blob_akms(uint8_t *out, uint8_t *out_end,
+			   const keymaster_blob_t *blob);
 
-int TA_serialize_characteristics(uint8_t *out,
+int TA_serialize_characteristics(uint8_t *out, uint8_t *out_end,
 		const keymaster_key_characteristics_t *characteristics);
 
-int TA_serialize_characteristics_akms(uint8_t *out,
+int TA_serialize_characteristics_akms(uint8_t *out, uint8_t *out_end,
 		const keymaster_key_characteristics_t *characteristics);
 
-int TA_serialize_key_blob_akms(uint8_t *out,
+int TA_serialize_key_blob_akms(uint8_t *out, uint8_t *out_end,
 			       const keymaster_key_blob_t *key_blob);
 
-int TA_serialize_cert_chain_akms(uint8_t *out,
+int TA_serialize_cert_chain_akms(uint8_t *out, uint8_t *out_end,
 				 const keymaster_cert_chain_t *cert_chain,
 				 keymaster_error_t *res);
 
-int TA_serialize_auth_set(uint8_t *out,
+int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 			  const keymaster_key_param_set_t *param_set);
-int TA_serialize_param_set(uint8_t *out,
+int TA_serialize_param_set(uint8_t *out, uint8_t __maybe_unused *out_end,
 			   const keymaster_key_param_set_t *params);
 
-TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint32_t *out_size,
+TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint8_t *out_end,
+				    uint32_t *out_size,
 				    const TEE_ObjectHandle key_obj);
 
-TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint32_t *out_size,
+TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint8_t *out_end,
+				   uint32_t *out_size,
 				   const TEE_ObjectHandle key_obj);
 
 /* Deserializers */
