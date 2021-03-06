@@ -478,14 +478,16 @@ int TA_deserialize_key_format(uint8_t *in, uint8_t *in_end,
 }
 
 /* Serializers */
-int TA_serialize_rsp_err(uint8_t *out, const keymaster_error_t *error)
+int TA_serialize_rsp_err(uint8_t *out, uint8_t *out_end,
+			 const keymaster_error_t *error)
 {
 	DMSG("res: %d", *error);
 	TEE_MemMove(out, error, sizeof(*error));
 	return sizeof(*error);
 }
 
-int TA_serialize_blob_akms(uint8_t *out, const keymaster_blob_t *blob)
+int TA_serialize_blob_akms(uint8_t *out, uint8_t *out_end,
+			   const keymaster_blob_t *blob)
 {
 	DMSG("%s %d", __func__, __LINE__);
 	TEE_MemMove(out, &blob->data_length, SIZE_LENGTH_AKMS);
@@ -495,7 +497,8 @@ int TA_serialize_blob_akms(uint8_t *out, const keymaster_blob_t *blob)
 }
 
 static uint8_t *param_serialize(const keymaster_key_param_t *param,
-				uint8_t *buf, const uint8_t *indirect_base,
+				uint8_t *buf, uint8_t *buf_end,
+				const uint8_t *indirect_base,
 				uint8_t *addr_indirect_data)
 {
 	int32_t offset = 0;
@@ -553,7 +556,7 @@ static uint8_t *param_serialize(const keymaster_key_param_t *param,
 	return buf;
 }
 
-int TA_serialize_auth_set(uint8_t *out,
+int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 			  const keymaster_key_param_set_t *param_set)
 {
 	uint8_t *start = out;
@@ -612,7 +615,7 @@ int TA_serialize_auth_set(uint8_t *out,
 
 	p_elems = out;
 	for (size_t i = 0; i < param_set->length; i++) {
-		out = param_serialize(param_set->params + i, out,
+		out = param_serialize(param_set->params + i, out, out_end,
 				      indirect_data, addr_indirect_data[i]);
 	}
 
@@ -633,19 +636,21 @@ int TA_serialize_auth_set(uint8_t *out,
 	return serialized_auth_set_size;
 }
 
-int TA_serialize_characteristics_akms(uint8_t *out,
+int TA_serialize_characteristics_akms(uint8_t *out, uint8_t *out_end,
 			const keymaster_key_characteristics_t *characteristics)
 {
 	uint8_t *start = out;
 
 	DMSG("%s %d", __func__, __LINE__);
-	out += TA_serialize_auth_set(out, &(characteristics->hw_enforced));
-	out += TA_serialize_auth_set(out, &(characteristics->sw_enforced));
+	out += TA_serialize_auth_set(out, out_end,
+				     &(characteristics->hw_enforced));
+	out += TA_serialize_auth_set(out, out_end,
+				     &(characteristics->sw_enforced));
 
 	return out - start;
 }
 
-int TA_serialize_characteristics(uint8_t *out,
+int TA_serialize_characteristics(uint8_t *out, uint8_t *out_end,
 			const keymaster_key_characteristics_t *characteristics)
 {
 	uint8_t *start = out;
@@ -664,7 +669,8 @@ int TA_serialize_characteristics(uint8_t *out,
 		    keymaster_tag_get_type(
 			characteristics->hw_enforced.params[i].tag) ==
 			KM_BYTES) {
-			out += TA_serialize_blob_akms(out, &(characteristics->
+			out += TA_serialize_blob_akms(out, out_end,
+				&(characteristics->
 				hw_enforced.params[i].key_param.blob));
 		}
 	}
@@ -682,14 +688,15 @@ int TA_serialize_characteristics(uint8_t *out,
 		    keymaster_tag_get_type(
 			characteristics->sw_enforced.params[i].tag) ==
 			KM_BYTES) {
-			out += TA_serialize_blob_akms(out, &((characteristics->
+			out += TA_serialize_blob_akms(out, out_end,
+				&((characteristics->
 				sw_enforced.params + i)->key_param.blob));
 		}
 	}
 	return out - start;
 }
 
-int TA_serialize_key_blob_akms(uint8_t *out,
+int TA_serialize_key_blob_akms(uint8_t *out, uint8_t *out_end,
 			       const keymaster_key_blob_t *key_blob)
 {
 	DMSG("%s %d", __func__, __LINE__);
@@ -699,7 +706,7 @@ int TA_serialize_key_blob_akms(uint8_t *out,
 	return KEY_BLOB_SIZE_AKMS(key_blob);
 }
 
-int TA_serialize_cert_chain_akms(uint8_t *out,
+int TA_serialize_cert_chain_akms(uint8_t *out, uint8_t *out_end,
 				 const keymaster_cert_chain_t *cert_chain,
 				 keymaster_error_t *res)
 {
@@ -729,7 +736,7 @@ int TA_serialize_cert_chain_akms(uint8_t *out,
 	return out - start;
 }
 
-int TA_serialize_param_set(uint8_t *out,
+int TA_serialize_param_set(uint8_t *out, uint8_t __maybe_unused *out_end,
 			   const keymaster_key_param_set_t *params)
 {
 	uint8_t *start = out;
@@ -746,7 +753,7 @@ int TA_serialize_param_set(uint8_t *out,
 			KM_BIGNUM ||
 		    keymaster_tag_get_type(params->params[i].tag) ==
 			KM_BYTES) {
-			out += TA_serialize_blob_akms(out,
+			out += TA_serialize_blob_akms(out, out_end,
 					&(params->params[i].key_param.blob));
 		}
 	}
@@ -754,7 +761,8 @@ int TA_serialize_param_set(uint8_t *out,
 }
 
 /* Serialize root RSA key-pair (public and private parts) */
-TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint32_t *out_size,
+TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint8_t *out_end,
+				    uint32_t *out_size,
 				    const TEE_ObjectHandle key_obj)
 {
 	TEE_Result res = TEE_SUCCESS;
@@ -803,7 +811,8 @@ TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint32_t *out_size,
 	return res;
 }
 
-TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint32_t *out_size,
+TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint8_t *out_end,
+				   uint32_t *out_size,
 				   const TEE_ObjectHandle key_obj)
 {
 	TEE_Result res = TEE_SUCCESS;
