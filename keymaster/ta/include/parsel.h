@@ -39,7 +39,6 @@ bool TA_is_out_of_bounds(uint8_t *in, uint8_t *in_end, size_t size);
 /* Serializers */
 int TA_serialize_rsp_err(uint8_t *out, const keymaster_error_t *error);
 
-int TA_serialize_blob(uint8_t *out, const keymaster_blob_t *export_data);
 int TA_serialize_blob_akms(uint8_t *out, const keymaster_blob_t *blob);
 
 int TA_serialize_characteristics(uint8_t *out,
@@ -68,11 +67,6 @@ TEE_Result TA_serialize_ec_keypair(uint8_t *out,
 				   const TEE_ObjectHandle key_obj);
 
 /* Deserializers */
-int TA_deserialize_blob(uint8_t *in, const uint8_t *end,
-			keymaster_blob_t *blob_t,
-			const bool check_presence, keymaster_error_t *res,
-			bool is_input);
-
 int TA_deserialize_blob_akms(uint8_t *in, uint8_t *end,
 			keymaster_blob_t *blob_t,
 			const bool check_presence, keymaster_error_t *res,
