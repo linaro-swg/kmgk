@@ -38,20 +38,6 @@
 /* Max size of attestation challenge */
 #define MAX_ATTESTATION_CHALLENGE 128
 
-/* ASN.1 parser static TA */
-#define ASN1_PARSER_UUID \
-		{ 0x273fcb14, 0xe831, 0x4cf2, \
-			{ 0x93, 0xc4, 0x76, 0x15, 0xdb, 0xd3, 0x0e, 0x90 } }
-
-#if 0
-/* RNG entropy static TA */
-#define RNG_ENTROPY_UUID \
-		{ 0x57ff3310, 0x0919, 0x4935, \
-			{ 0xb9, 0xc8, 0x32, 0xa4, 0x1d, 0x94, 0xb9, 0x5b } }
-
-#define CMD_ADD_RNG_ENTROPY 0
-#endif
-
 /* Empty definitions */
 #define EMPTY_CERT_CHAIN {.entries = NULL, .entry_count = 0}
 #define EMPTY_BLOB {.data = NULL, .data_length = 0}
