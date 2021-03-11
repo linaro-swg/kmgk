@@ -150,6 +150,7 @@ static keymaster_error_t TA_configure(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *out_end = NULL;
 	size_t out_size = 0;
 	keymaster_error_t res = KM_ERROR_OK;
+	bool oob = false; /* out of bounds flag */
 
 	in = (uint8_t *)params[0].memref.buffer;
 	in_size = (size_t)params[0].memref.size;
@@ -195,7 +196,11 @@ static keymaster_error_t TA_configure(TEE_Param params[TEE_NUM_PARAMS])
 	}
 
 out:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	return res;
@@ -218,6 +223,7 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 						   TEE_PARAM_TYPE_NONE);
 	TEE_Param params_tee[TEE_NUM_PARAMS];
 	keymaster_error_t res = KM_ERROR_OK;
+	bool oob = false; /* out of bounds flag */
 
 	in = (uint8_t *)params[0].memref.buffer;
 	in_size = (size_t)params[0].memref.size;
@@ -274,8 +280,13 @@ static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Invoke command for RNG static TA failed, res=%x", res);
 		goto out;
 	}
+
 out:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 	if (data)
 		TEE_Free(data);
@@ -306,6 +317,7 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint64_t key_rsa_public_exponent = UNDEFINED;
 	uint32_t os_version = 0xFFFFFFFF;
 	uint32_t os_patchlevel = 0xFFFFFFFF;
+	bool oob = false; /* out of bounds flag */
 
 	in = (uint8_t *)params[0].memref.buffer;
 	in_end = in + params[0].memref.size;
@@ -404,7 +416,11 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 	key_blob.key_material = key_material;
 
 exit:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK) {
 		out += TA_serialize_key_blob_akms(out, out_end, &key_blob);
 		out += TA_serialize_characteristics_akms(out, out_end,
@@ -441,6 +457,7 @@ static keymaster_error_t TA_getKeyCharacteristics(
 	uint32_t key_size = 0;
 	uint32_t type = 0;
 	bool exportable = false;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -497,7 +514,11 @@ static keymaster_error_t TA_getKeyCharacteristics(
 		goto exit;
 
 exit:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK)
 		out += TA_serialize_characteristics_akms(out, out_end, &chr);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
@@ -542,6 +563,7 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint32_t key_size = UNDEFINED;
 	uint32_t attrs_in_count = 0;
 	uint64_t key_rsa_public_exponent = UNDEFINED;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -696,7 +718,11 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	key_blob.key_material = key_material;
 
 out:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK) {
 		out += TA_serialize_key_blob_akms(out, out_end, &key_blob);
 		out += TA_serialize_characteristics_akms(out, out_end,
@@ -739,6 +765,7 @@ static keymaster_error_t TA_exportKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *key_material = NULL;
 	uint32_t key_size = UNDEFINED;
 	uint32_t type = 0;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -805,7 +832,11 @@ static keymaster_error_t TA_exportKey(TEE_Param params[TEE_NUM_PARAMS])
 		goto out;
 
 out:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK)
 		out += TA_serialize_blob_akms(out, out_end, &export_data);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
@@ -853,6 +884,7 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 	keymaster_key_characteristics_t key_chr = EMPTY_CHARACTS;
 	uint32_t key_chr_size = 0;
 	uint8_t verified_boot_state = 0xff;
+	bool oob = false; /* out of bounds flag */
 
 #ifdef ENUM_PERS_OBJS
 	TA_enum_attest_objs();
@@ -1041,7 +1073,11 @@ static keymaster_error_t TA_attestKey(TEE_Param params[TEE_NUM_PARAMS])
 
 exit:
 	/* Serialize output chain of certificates */
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK) {
 		out += TA_serialize_cert_chain_akms(out, out_end, &cert_chain,
 						    &res);
@@ -1077,6 +1113,7 @@ static keymaster_error_t TA_upgradeKey(TEE_Param params[TEE_NUM_PARAMS])
 	keymaster_key_param_set_t upgr_params = EMPTY_PARAM_SET; /* IN */
 	keymaster_key_blob_t upgraded_key = EMPTY_KEY_BLOB; /* OUT */
 	keymaster_error_t res = KM_ERROR_OK;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -1106,7 +1143,11 @@ static keymaster_error_t TA_upgradeKey(TEE_Param params[TEE_NUM_PARAMS])
 
 out:
 	/* TODO Upgrade Key */
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK)
 		out += TA_serialize_key_blob_akms(out, out_end, &upgraded_key);
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
@@ -1124,6 +1165,7 @@ static keymaster_error_t TA_deleteKey(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *out_end = NULL;
 	size_t out_size = 0;
 	keymaster_error_t res = KM_ERROR_OK;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -1138,7 +1180,11 @@ static keymaster_error_t TA_deleteKey(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Insufficient output buffer space!");
 		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	return res;
@@ -1151,6 +1197,7 @@ static keymaster_error_t TA_deleteAllKeys(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *out_end = NULL;
 	size_t out_size = 0;
 	keymaster_error_t res = KM_ERROR_OK;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -1165,7 +1212,11 @@ static keymaster_error_t TA_deleteAllKeys(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Insufficient output buffer space!");
 		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	return res;
@@ -1179,6 +1230,7 @@ static keymaster_error_t TA_destroyAttestationIds(
 	uint8_t *out_end = NULL;
 	size_t out_size = 0;
 	keymaster_error_t res = KM_ERROR_OK;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -1193,7 +1245,11 @@ static keymaster_error_t TA_destroyAttestationIds(
 		EMSG("Insufficient output buffer space!");
 		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 	return res;
 }
@@ -1236,6 +1292,7 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 	TEE_OperationHandle *operation = TEE_HANDLE_NULL;
 	TEE_OperationHandle *digest_op = TEE_HANDLE_NULL;
 	uint8_t key_id[TAG_LENGTH];
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -1361,7 +1418,11 @@ static keymaster_error_t TA_begin(TEE_Param params[TEE_NUM_PARAMS])
 		goto out;
 
 out:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK) {
 		TEE_MemMove(out, &operation_handle, sizeof(operation_handle));
 		out += sizeof(operation_handle);
@@ -1413,6 +1474,7 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS])
 	keymaster_operation_t operation = EMPTY_OPERATION;
 	TEE_ObjectHandle obj_h = TEE_HANDLE_NULL;
 	bool is_input_ext = false;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -1495,7 +1557,11 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS])
 	}
 
 out:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK) {
 		out += TA_serialize_blob_akms(out, out_end, &output);
 		TEE_MemMove(out, &input_consumed, SIZE_LENGTH_AKMS);
@@ -1548,6 +1614,7 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 	keymaster_operation_t operation = EMPTY_OPERATION;
 	TEE_ObjectHandle obj_h = TEE_HANDLE_NULL;
 	bool is_input_ext = false;
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -1656,7 +1723,11 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 	output.data_length = keyblob_out_size;
 
 out:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	if (res == KM_ERROR_OK) {
 		out += TA_serialize_blob_akms(out, out_end, &output);
 		out += TA_serialize_auth_set(out, out_end, &out_params);
@@ -1690,6 +1761,7 @@ static keymaster_error_t TA_abort(TEE_Param params[TEE_NUM_PARAMS])
 	size_t out_size = 0;
 	keymaster_error_t res = KM_ERROR_OK;
 	keymaster_operation_handle_t operation_handle = 0; /* IN */
+	bool oob = false; /* out of bounds flag */
 
 	DMSG("%s %d", __func__, __LINE__);
 
@@ -1713,8 +1785,13 @@ static keymaster_error_t TA_abort(TEE_Param params[TEE_NUM_PARAMS])
 	if (res != KM_ERROR_OK)
 		goto out;
 	res = TA_abort_operation(operation_handle);
+
 out:
-	out += TA_serialize_rsp_err(out, out_end, &res);
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 	return res;
 }

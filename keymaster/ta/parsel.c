@@ -479,10 +479,16 @@ int TA_deserialize_key_format(uint8_t *in, uint8_t *in_end,
 
 /* Serializers */
 int TA_serialize_rsp_err(uint8_t *out, uint8_t *out_end,
-			 const keymaster_error_t *error)
+			 const keymaster_error_t *error, bool *oob)
 {
 	DMSG("res: %d", *error);
+	if (TA_is_out_of_bounds(out, out_end, sizeof(*error))) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		goto out;
+	}
 	TEE_MemMove(out, error, sizeof(*error));
+out:
 	return sizeof(*error);
 }
 
