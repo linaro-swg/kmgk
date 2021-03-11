@@ -1330,7 +1330,7 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *key_material = NULL;
 	uint32_t key_size = 0;
 	uint32_t type = 0;
-	uint32_t out_size = 0;
+	uint32_t keyblob_out_size = 0;
 	uint32_t input_provided = 0;
 	keymaster_error_t res = KM_ERROR_OK;
 	keymaster_key_param_set_t params_t = EMPTY_PARAM_SET;
@@ -1380,8 +1380,8 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS])
 
 	if (input.data_length != 0 && type == TEE_TYPE_RSA_KEYPAIR)
 		operation.got_input = true;
-	out_size = TA_possibe_size(type, key_size, input, 0);
-	output.data = TEE_Malloc(out_size, TEE_MALLOC_FILL_ZERO);
+	keyblob_out_size = TA_possibe_size(type, key_size, input, 0);
+	output.data = TEE_Malloc(keyblob_out_size, TEE_MALLOC_FILL_ZERO);
 	if (!output.data) {
 		EMSG("Failed to allocate memory for output");
 		res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
@@ -1389,14 +1389,14 @@ static keymaster_error_t TA_update(TEE_Param params[TEE_NUM_PARAMS])
 	}
 	switch (type) {
 	case TEE_TYPE_AES:
-		res = TA_aes_update(&operation, &input, &output, &out_size,
+		res = TA_aes_update(&operation, &input, &output, &keyblob_out_size,
 				    input_provided, &input_consumed,
 				    &in_params, &is_input_ext);
 		break;
 	case TEE_TYPE_RSA_KEYPAIR:
-		res = TA_rsa_update(&operation, &input, &output, &out_size,
-				    key_size, &input_consumed, input_provided,
-				    obj_h);
+		res = TA_rsa_update(&operation, &input, &output,
+				    &keyblob_out_size, key_size,
+				    &input_consumed, input_provided, obj_h);
 		break;
 	case TEE_TYPE_ECDSA_KEYPAIR:
 		res = TA_ec_update(&operation, &input, &output,
@@ -1458,7 +1458,7 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 	uint8_t *key_material = NULL;
 	uint32_t key_size = 0;
 	uint32_t type = 0;
-	uint32_t out_size = 0;
+	uint32_t keyblob_out_size = 0;
 	uint32_t tag_len = 0;
 	keymaster_error_t res = KM_ERROR_OK;
 	keymaster_key_param_set_t params_t = EMPTY_PARAM_SET;
@@ -1511,8 +1511,8 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 	if (type == TEE_TYPE_AES && operation.mode == KM_MODE_GCM)
 		tag_len = operation.mac_length / 8; /* from bits to bytes */
 
-	out_size = TA_possibe_size(type, key_size, input, tag_len);
-	output.data = TEE_Malloc(out_size, TEE_MALLOC_FILL_ZERO);
+	keyblob_out_size = TA_possibe_size(type, key_size, input, tag_len);
+	output.data = TEE_Malloc(keyblob_out_size, TEE_MALLOC_FILL_ZERO);
 	if (!output.data) {
 		EMSG("Failed to allocate memory for output");
 		res = KM_ERROR_MEMORY_ALLOCATION_FAILED;
@@ -1520,28 +1520,32 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 	}
 	switch (type) {
 	case TEE_TYPE_AES:
-		res = TA_aes_finish(&operation, &input, &output, &out_size,
-				    tag_len, &is_input_ext, &in_params);
+		res = TA_aes_finish(&operation, &input, &output,
+				    &keyblob_out_size, tag_len, &is_input_ext,
+				    &in_params);
 		break;
 	case TEE_TYPE_RSA_KEYPAIR:
-		res = TA_rsa_finish(&operation, &input, &output, &out_size,
-				    key_size, signature, obj_h, &is_input_ext);
+		res = TA_rsa_finish(&operation, &input, &output,
+				    &keyblob_out_size, key_size,
+				    signature, obj_h, &is_input_ext);
 		break;
 	case TEE_TYPE_ECDSA_KEYPAIR:
 		res = TA_ec_finish(&operation, &input, &output, &signature,
-				   &out_size, key_size, &is_input_ext);
+				   &keyblob_out_size, key_size, &is_input_ext);
 		break;
 	default: /* HMAC */
 		if (operation.purpose == KM_PURPOSE_SIGN) {
 			TEE_MACComputeFinal(*operation.operation, input.data,
 					    input.data_length, output.data,
-					    &out_size);
+					    &keyblob_out_size);
 			/* Trim out size to KM_TAG_MAC_LENGTH */
 			if (operation.mac_length != UNDEFINED) {
-				if (out_size > operation.mac_length / 8) {
+				if (keyblob_out_size >
+				    operation.mac_length / 8) {
 					DMSG("Trim HMAC out size to %d",
 					     operation.mac_length);
-					out_size = operation.mac_length / 8;
+					keyblob_out_size =
+						operation.mac_length / 8;
 				}
 			}
 		} else { /* KM_PURPOSE_VERIFY */
@@ -1550,7 +1554,7 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 						  input.data_length,
 						  signature.data,
 						  signature.data_length);
-			out_size = 0;
+			keyblob_out_size = 0;
 			/* Convert error code to Android style */
 			if (res == (int) TEE_ERROR_MAC_INVALID)
 				res = KM_ERROR_VERIFICATION_FAILED;
@@ -1560,7 +1564,7 @@ static keymaster_error_t TA_finish(TEE_Param params[TEE_NUM_PARAMS])
 		EMSG("Finish operation failed with error code %x", res);
 		goto out;
 	}
-	output.data_length = out_size;
+	output.data_length = keyblob_out_size;
 
 out:
 	out += TA_serialize_rsp_err(out, out_end, &res);
