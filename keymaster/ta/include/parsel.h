@@ -50,7 +50,8 @@ int TA_serialize_characteristics_akms(uint8_t *out, uint8_t *out_end,
 		const keymaster_key_characteristics_t *characteristics);
 
 int TA_serialize_key_blob_akms(uint8_t *out, uint8_t *out_end,
-			       const keymaster_key_blob_t *key_blob);
+			       const keymaster_key_blob_t *key_blob,
+			       bool *oob);
 
 int TA_serialize_cert_chain_akms(uint8_t *out, uint8_t *out_end,
 				 const keymaster_cert_chain_t *cert_chain,

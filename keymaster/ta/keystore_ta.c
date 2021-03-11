@@ -422,10 +422,18 @@ exit:
 		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_key_blob_akms(out, out_end, &key_blob);
+		out += TA_serialize_key_blob_akms(out, out_end, &key_blob,
+						  &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto out;
+		}
 		out += TA_serialize_characteristics_akms(out, out_end,
 							 &characts);
 	}
+
+out:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 	if (key_material)
 		TEE_Free(key_material);
@@ -724,10 +732,18 @@ out:
 		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_key_blob_akms(out, out_end, &key_blob);
+		out += TA_serialize_key_blob_akms(out, out_end, &key_blob,
+						  &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
 		out += TA_serialize_characteristics_akms(out, out_end,
 							 &characts);
 	}
+
+exit:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	if ((key_data.data && key_format != KM_KEY_FORMAT_RAW) ||
@@ -1148,8 +1164,17 @@ out:
 		EMSG("Out of output buffer space");
 		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
-	if (res == KM_ERROR_OK)
-		out += TA_serialize_key_blob_akms(out, out_end, &upgraded_key);
+	if (res == KM_ERROR_OK) {
+		out += TA_serialize_key_blob_akms(out, out_end, &upgraded_key,
+						  &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
+	}
+
+exit:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	TA_free_params(&upgr_params);
@@ -1569,6 +1594,8 @@ out:
 		out += TA_serialize_auth_set(out, out_end, &out_params);
 		TA_update_operation(operation_handle, &operation);
 	}
+
+exit:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	if (input.data && is_input_ext)
