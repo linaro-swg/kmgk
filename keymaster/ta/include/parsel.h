@@ -47,7 +47,8 @@ int TA_serialize_characteristics(uint8_t *out, uint8_t *out_end,
 		const keymaster_key_characteristics_t *characteristics);
 
 int TA_serialize_characteristics_akms(uint8_t *out, uint8_t *out_end,
-		const keymaster_key_characteristics_t *characteristics);
+		const keymaster_key_characteristics_t *characteristics,
+		bool *oob);
 
 int TA_serialize_key_blob_akms(uint8_t *out, uint8_t *out_end,
 			       const keymaster_key_blob_t *key_blob,
@@ -58,7 +59,8 @@ int TA_serialize_cert_chain_akms(uint8_t *out, uint8_t *out_end,
 				 keymaster_error_t *res);
 
 int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
-			  const keymaster_key_param_set_t *param_set);
+			  const keymaster_key_param_set_t *param_set,
+			  bool *oob);
 int TA_serialize_param_set(uint8_t *out, uint8_t __maybe_unused *out_end,
 			   const keymaster_key_param_set_t *params);
 

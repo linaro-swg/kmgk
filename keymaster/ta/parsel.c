@@ -503,12 +503,17 @@ int TA_serialize_blob_akms(uint8_t *out, uint8_t *out_end,
 }
 
 static uint8_t *param_serialize(const keymaster_key_param_t *param,
-				uint8_t *buf, uint8_t *buf_end,
+				uint8_t *buf, uint8_t *buf_end, bool *oob,
 				const uint8_t *indirect_base,
 				uint8_t *addr_indirect_data)
 {
 	int32_t offset = 0;
 
+	if (TA_is_out_of_bounds(buf, buf_end, sizeof(param->tag))) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		goto out;
+	}
 	TEE_MemMove(buf, &param->tag, sizeof(param->tag));
 	buf += sizeof(param->tag);
 
@@ -517,23 +522,47 @@ static uint8_t *param_serialize(const keymaster_key_param_t *param,
 		break;
 	case KM_ENUM:
 	case KM_ENUM_REP:
+		if (TA_is_out_of_bounds(buf, buf_end,
+					sizeof(param->key_param.enumerated))) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			goto out;
+		}
 		TEE_MemMove(buf, &param->key_param.enumerated,
 			    sizeof(param->key_param.enumerated));
 		buf += sizeof(param->key_param.enumerated);
 		break;
 	case KM_UINT:
 	case KM_UINT_REP:
+		if (TA_is_out_of_bounds(buf, buf_end,
+					sizeof(param->key_param.integer))) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			goto out;
+		}
 		TEE_MemMove(buf, &param->key_param.integer,
 			    sizeof(param->key_param.integer));
 		buf += sizeof(param->key_param.integer);
 		break;
 	case KM_ULONG:
 	case KM_ULONG_REP:
+		if (TA_is_out_of_bounds(buf, buf_end,
+				sizeof(param->key_param.long_integer))) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			goto out;
+		}
 		TEE_MemMove(buf, &param->key_param.long_integer,
 			    sizeof(param->key_param.long_integer));
 		buf += sizeof(param->key_param.long_integer);
 		break;
 	case KM_DATE:
+		if (TA_is_out_of_bounds(buf, buf_end,
+					sizeof(param->key_param.date_time))) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			goto out;
+		}
 		TEE_MemMove(buf, &param->key_param.date_time,
 			    sizeof(param->key_param.date_time));
 		buf += sizeof(param->key_param.date_time);
@@ -544,11 +573,21 @@ static uint8_t *param_serialize(const keymaster_key_param_t *param,
 		break;
 	case KM_BIGNUM:
 	case KM_BYTES:
+		if (TA_is_out_of_bounds(buf, buf_end, SIZE_LENGTH_AKMS)) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			goto out;
+		}
 		TEE_MemMove(buf, &param->key_param.blob.data_length,
 			    SIZE_LENGTH_AKMS);
 		buf += SIZE_LENGTH_AKMS;
 		DMSG("blob len: %ld", param->key_param.blob.data_length);
 		offset = addr_indirect_data - indirect_base;
+		if (TA_is_out_of_bounds(buf, buf_end, SIZE_LENGTH_AKMS)) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			goto out;
+		}
 		TEE_MemMove(buf, &offset, SIZE_LENGTH_AKMS);
 		DMSG("blob offset: %d", offset);
 		buf += SIZE_LENGTH_AKMS;
@@ -559,11 +598,13 @@ static uint8_t *param_serialize(const keymaster_key_param_t *param,
 		break;
 	}
 
+out:
 	return buf;
 }
 
 int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
-			  const keymaster_key_param_set_t *param_set)
+			  const keymaster_key_param_set_t *param_set,
+			  bool *oob)
 {
 	uint8_t *start = out;
 	uint8_t *p_elems_size = NULL;
@@ -591,6 +632,12 @@ int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 	for (size_t i = 0; i < param_set->length; i++) {
 		if (keymaster_tag_get_type(param_set->params->tag) == KM_BIGNUM ||
 		    keymaster_tag_get_type(param_set->params->tag) == KM_BYTES) {
+			if (TA_is_out_of_bounds(out, out_end,
+			    param_set->params->key_param.blob.data_length)) {
+				EMSG("Exceeding end of output buffer");
+				*oob = true;
+				goto exit;
+			}
 			TEE_MemMove(out,
 				    param_set->params->key_param.blob.data,
 				    param_set->params->key_param.blob.data_length);
@@ -606,11 +653,21 @@ int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 	}
 	/* populate indirect_data_size */
 	/* *(uint32_t *)start = indirect_data_size; */ /* alian issue */
+	if (TA_is_out_of_bounds(start, out_end, SIZE_LENGTH_AKMS)) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		goto exit;
+	}
 	TEE_MemMove(start, &indirect_data_size, SIZE_LENGTH_AKMS);
 
 	DMSG("indirect_data_size: %d", indirect_data_size);
 
 	/* elems count */
+	if (TA_is_out_of_bounds(out, out_end, SIZE_LENGTH_AKMS)) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		goto exit;
+	}
 	TEE_MemMove(out, &param_set->length, SIZE_LENGTH_AKMS);
 	out += SIZE_LENGTH_AKMS;
 	DMSG("elems cnt: %ld", param_set->length);
@@ -621,12 +678,21 @@ int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 
 	p_elems = out;
 	for (size_t i = 0; i < param_set->length; i++) {
-		out = param_serialize(param_set->params + i, out, out_end,
+		out = param_serialize(param_set->params + i, out, out_end, oob,
 				      indirect_data, addr_indirect_data[i]);
+		if (*oob) {
+			EMSG("Exceeding end of output buffer");
+			goto exit;
+		}
 	}
 
 	/* populate elems size */
 	elems_size = out - p_elems;
+	if (TA_is_out_of_bounds(p_elems_size, out_end, SIZE_LENGTH_AKMS)) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		goto exit;
+	}
 	TEE_MemMove(p_elems_size, &elems_size, SIZE_LENGTH_AKMS);
 	DMSG("elems size: %d", elems_size);
 
@@ -636,23 +702,38 @@ int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 		sizeof(uint32_t) + /* Number of elems_ */
 		sizeof(uint32_t) + /* Size of elems_ */
 		elems_size; /* elems_ */
-	DMSG("auth_set size: %d", serialized_auth_set_size);
 
+exit:
+	DMSG("auth_set size: %d", serialized_auth_set_size);
 	TEE_Free(addr_indirect_data);
+	if (!*oob &&
+	    TA_is_out_of_bounds(start, out_end, serialized_auth_set_size)) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+	}
 	return serialized_auth_set_size;
 }
 
 int TA_serialize_characteristics_akms(uint8_t *out, uint8_t *out_end,
-			const keymaster_key_characteristics_t *characteristics)
+		const keymaster_key_characteristics_t *characteristics,
+		bool *oob)
 {
 	uint8_t *start = out;
 
 	DMSG("%s %d", __func__, __LINE__);
 	out += TA_serialize_auth_set(out, out_end,
-				     &(characteristics->hw_enforced));
+				     &(characteristics->hw_enforced), oob);
+	if (*oob) {
+		EMSG("Out of output buffer space");
+		goto out;
+	}
 	out += TA_serialize_auth_set(out, out_end,
-				     &(characteristics->sw_enforced));
-
+				     &(characteristics->sw_enforced), oob);
+	if (*oob) {
+		EMSG("Out of output buffer space");
+		goto out;
+	}
+out:
 	return out - start;
 }
 
