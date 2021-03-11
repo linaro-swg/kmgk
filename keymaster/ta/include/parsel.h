@@ -38,7 +38,7 @@ bool TA_is_out_of_bounds(uint8_t *in, uint8_t *in_end, size_t size);
 
 /* Serializers */
 int TA_serialize_rsp_err(uint8_t *out, uint8_t *out_end,
-			 const keymaster_error_t *error);
+			 const keymaster_error_t *error, bool *oob);
 
 int TA_serialize_blob_akms(uint8_t *out, uint8_t *out_end,
 			   const keymaster_blob_t *blob);

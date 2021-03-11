@@ -259,6 +259,8 @@ keymaster_error_t optee_keymaster_call(uint32_t cmd,
 	 *    so res can't be serialized into rsp
 	 * 3. rsp_size (out_size) != OPTEE_KEYMASTER_RECV_BUF_SIZE
 	 *    (KM_RECV_BUF_SIZE) in keystore_ta.c
+	 * 4. error writing past the end of recv_buf, i.e. writing past out_end
+	 *    in keystore_ta.c
 	 */
 	ALOGE("Response of size %d contained error code %d\n", (int)rsp_size,
 	      (int)res);
