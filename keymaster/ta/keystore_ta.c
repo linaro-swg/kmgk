@@ -430,7 +430,12 @@ exit:
 			goto out;
 		}
 		out += TA_serialize_characteristics_akms(out, out_end,
-							 &characts);
+							 &characts, &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto out;
+		}
 	}
 
 out:
@@ -527,8 +532,17 @@ exit:
 		EMSG("Out of output buffer space");
 		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
-	if (res == KM_ERROR_OK)
-		out += TA_serialize_characteristics_akms(out, out_end, &chr);
+	if (res == KM_ERROR_OK) {
+		out += TA_serialize_characteristics_akms(out, out_end, &chr,
+							 &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto out;
+		}
+	}
+
+out:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	if (obj_h != TEE_HANDLE_NULL)
@@ -740,7 +754,12 @@ out:
 			goto exit;
 		}
 		out += TA_serialize_characteristics_akms(out, out_end,
-							 &characts);
+							 &characts, &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
 	}
 
 exit:
@@ -1451,8 +1470,15 @@ out:
 	if (res == KM_ERROR_OK) {
 		TEE_MemMove(out, &operation_handle, sizeof(operation_handle));
 		out += sizeof(operation_handle);
-		out += TA_serialize_auth_set(out, out_end, &out_params);
+		out += TA_serialize_auth_set(out, out_end, &out_params, &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
 	}
+
+exit:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	if (obj_h != TEE_HANDLE_NULL)
@@ -1591,7 +1617,12 @@ out:
 		out += TA_serialize_blob_akms(out, out_end, &output);
 		TEE_MemMove(out, &input_consumed, SIZE_LENGTH_AKMS);
 		out += SIZE_LENGTH_AKMS;
-		out += TA_serialize_auth_set(out, out_end, &out_params);
+		out += TA_serialize_auth_set(out, out_end, &out_params, &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
 		TA_update_operation(operation_handle, &operation);
 	}
 
@@ -1757,8 +1788,15 @@ out:
 	}
 	if (res == KM_ERROR_OK) {
 		out += TA_serialize_blob_akms(out, out_end, &output);
-		out += TA_serialize_auth_set(out, out_end, &out_params);
+		out += TA_serialize_auth_set(out, out_end, &out_params, &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
 	}
+
+exit:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	TA_abort_operation(operation_handle);
