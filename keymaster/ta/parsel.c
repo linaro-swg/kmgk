@@ -703,12 +703,19 @@ int TA_serialize_characteristics(uint8_t *out, uint8_t *out_end,
 }
 
 int TA_serialize_key_blob_akms(uint8_t *out, uint8_t *out_end,
-			       const keymaster_key_blob_t *key_blob)
+			       const keymaster_key_blob_t *key_blob,
+			       bool *oob)
 {
 	DMSG("%s %d", __func__, __LINE__);
+	if (TA_is_out_of_bounds(out, out_end, KEY_BLOB_SIZE_AKMS(key_blob))) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		goto out;
+	}
 	TEE_MemMove(out, &key_blob->key_material_size, SIZE_LENGTH_AKMS);
 	out += SIZE_LENGTH_AKMS;
 	TEE_MemMove(out, key_blob->key_material, key_blob->key_material_size);
+out:
 	return KEY_BLOB_SIZE_AKMS(key_blob);
 }
 
