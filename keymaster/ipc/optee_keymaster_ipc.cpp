@@ -257,6 +257,8 @@ keymaster_error_t optee_keymaster_call(uint32_t cmd,
 	 * 1. param_types != exp_param_types in TA_InvokeCommandEntryPoint()
 	 * 2. req or rsp (in or out bufptr in keystore_ta.c) are NULL
 	 *    so res can't be serialized into rsp
+	 * 3. rsp_size (out_size) != OPTEE_KEYMASTER_RECV_BUF_SIZE
+	 *    (KM_RECV_BUF_SIZE) in keystore_ta.c
 	 */
 	ALOGE("Response of size %d contained error code %d\n", (int)rsp_size,
 	      (int)res);

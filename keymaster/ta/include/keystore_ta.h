@@ -35,6 +35,11 @@
 #include "crypto_rsa.h"
 #include "crypto_ec.h"
 
+/*
+ * KeyMaster message size
+ */
+#define KM_RECV_BUF_SIZE 8192
+
 /* Max size of attestation challenge */
 #define MAX_ATTESTATION_CHALLENGE 128
 
