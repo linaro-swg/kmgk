@@ -41,10 +41,11 @@ int TA_serialize_rsp_err(uint8_t *out, uint8_t *out_end,
 			 const keymaster_error_t *error, bool *oob);
 
 int TA_serialize_blob_akms(uint8_t *out, uint8_t *out_end,
-			   const keymaster_blob_t *blob);
+			   const keymaster_blob_t *blob, bool *oob);
 
 int TA_serialize_characteristics(uint8_t *out, uint8_t *out_end,
-		const keymaster_key_characteristics_t *characteristics);
+		const keymaster_key_characteristics_t *characteristics,
+		bool *oob);
 
 int TA_serialize_characteristics_akms(uint8_t *out, uint8_t *out_end,
 		const keymaster_key_characteristics_t *characteristics,
@@ -61,8 +62,8 @@ int TA_serialize_cert_chain_akms(uint8_t *out, uint8_t *out_end,
 int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 			  const keymaster_key_param_set_t *param_set,
 			  bool *oob);
-int TA_serialize_param_set(uint8_t *out, uint8_t __maybe_unused *out_end,
-			   const keymaster_key_param_set_t *params);
+int TA_serialize_param_set(uint8_t *out, uint8_t *out_end,
+			   const keymaster_key_param_set_t *params, bool *oob);
 
 TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint8_t *out_end,
 				    uint32_t *out_size,
