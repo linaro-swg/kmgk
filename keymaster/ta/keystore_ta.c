@@ -407,7 +407,13 @@ static keymaster_error_t TA_generateKey(TEE_Param params[TEE_NUM_PARAMS])
 
 	TA_serialize_param_set(key_material + key_buffer_size,
 			       key_material + key_blob.key_material_size,
-			       &params_t);
+			       &params_t, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		goto exit;
+	}
+
 	res = TA_encrypt(key_material, key_blob.key_material_size);
 	if (res != KM_ERROR_OK) {
 		EMSG("Failed to encrypt key blob, res=%x", res);
@@ -731,7 +737,13 @@ static keymaster_error_t TA_importKey(TEE_Param params[TEE_NUM_PARAMS])
 	}
 	TA_serialize_param_set(key_material + key_buffer_size,
 			       key_material + key_blob.key_material_size,
-			       &params_t);
+			       &params_t, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		goto out;
+	}
+
 	res = TA_encrypt(key_material, key_blob.key_material_size);
 	if (res != KM_ERROR_OK) {
 		EMSG("Failed to encrypt blob");
@@ -872,8 +884,17 @@ out:
 		EMSG("Out of output buffer space");
 		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
-	if (res == KM_ERROR_OK)
-		out += TA_serialize_blob_akms(out, out_end, &export_data);
+	if (res == KM_ERROR_OK) {
+		out += TA_serialize_blob_akms(out, out_end, &export_data,
+					      &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
+	}
+
+exit:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	if (obj_h != TEE_HANDLE_NULL)
@@ -1620,7 +1641,12 @@ out:
 		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_blob_akms(out, out_end, &output);
+		out += TA_serialize_blob_akms(out, out_end, &output, &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
 		if (TA_is_out_of_bounds(out, out_end, SIZE_LENGTH_AKMS)) {
 			EMSG("Out of output buffer space");
 			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
@@ -1798,7 +1824,12 @@ out:
 		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
 	}
 	if (res == KM_ERROR_OK) {
-		out += TA_serialize_blob_akms(out, out_end, &output);
+		out += TA_serialize_blob_akms(out, out_end, &output, &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto exit;
+		}
 		out += TA_serialize_auth_set(out, out_end, &out_params, &oob);
 		if (oob) {
 			EMSG("Out of output buffer space");
