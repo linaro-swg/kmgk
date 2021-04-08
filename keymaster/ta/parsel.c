@@ -1003,7 +1003,7 @@ TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint8_t *out_end,
 
 TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint8_t *out_end,
 				   uint32_t *out_size,
-				   const TEE_ObjectHandle key_obj)
+				   const TEE_ObjectHandle key_obj, bool *oob)
 {
 	TEE_Result res = TEE_SUCCESS;
 	uint32_t readSize = 0;
@@ -1027,8 +1027,21 @@ TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint8_t *out_end,
 		return res;
 	}
 
+	if (TA_is_out_of_bounds(&out[*out_size], out_end, sizeof(uint32_t))) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		res = TEE_ERROR_OVERFLOW;
+		return res;
+	}
 	TEE_MemMove(&out[*out_size], &a_size, sizeof(uint32_t));
 	*out_size += sizeof(uint32_t);
+
+	if (TA_is_out_of_bounds(&out[*out_size], out_end, sizeof(uint32_t))) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		res = TEE_ERROR_OVERFLOW;
+		return res;
+	}
 	TEE_MemMove(&out[*out_size], &a, sizeof(uint32_t));
 	*out_size += sizeof(uint32_t);
 
@@ -1053,9 +1066,23 @@ TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint8_t *out_end,
 			     res);
 			return res;
 		}
+		if (TA_is_out_of_bounds(&out[*out_size], out_end,
+					sizeof(uint32_t))) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			res = TEE_ERROR_OVERFLOW;
+			return res;
+		}
 		TEE_MemMove(&out[*out_size], &key_attr_buf_size,
 			    sizeof(uint32_t));
 		*out_size += sizeof(uint32_t);
+		if (TA_is_out_of_bounds(&out[*out_size], out_end,
+					key_attr_buf_size)) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			res = TEE_ERROR_OVERFLOW;
+			return res;
+		}
 		TEE_MemMove(&out[*out_size], tmp_key_attr_buf,
 			    key_attr_buf_size);
 		*out_size += key_attr_buf_size;

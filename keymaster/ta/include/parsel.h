@@ -71,7 +71,7 @@ TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint8_t *out_end,
 
 TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint8_t *out_end,
 				   uint32_t *out_size,
-				   const TEE_ObjectHandle key_obj);
+				   const TEE_ObjectHandle key_obj, bool *oob);
 
 /* Deserializers */
 int TA_deserialize_blob_akms(uint8_t *in, uint8_t *end, keymaster_blob_t *blob,
