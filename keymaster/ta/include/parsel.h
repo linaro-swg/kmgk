@@ -57,7 +57,7 @@ int TA_serialize_key_blob_akms(uint8_t *out, uint8_t *out_end,
 
 int TA_serialize_cert_chain_akms(uint8_t *out, uint8_t *out_end,
 				 const keymaster_cert_chain_t *cert_chain,
-				 keymaster_error_t *res);
+				 keymaster_error_t *res, bool *oob);
 
 int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 			  const keymaster_key_param_set_t *param_set,

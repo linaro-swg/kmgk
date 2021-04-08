@@ -1136,8 +1136,15 @@ exit:
 	}
 	if (res == KM_ERROR_OK) {
 		out += TA_serialize_cert_chain_akms(out, out_end, &cert_chain,
-						    &res);
+						    &res, &oob);
+		if (oob) {
+			EMSG("Out of output buffer space");
+			res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto out;
+		}
 	}
+
+out:
 	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
 
 	if (key_to_attest.key_material)
