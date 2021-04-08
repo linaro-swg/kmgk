@@ -843,7 +843,7 @@ out:
 
 int TA_serialize_cert_chain_akms(uint8_t *out, uint8_t *out_end,
 				 const keymaster_cert_chain_t *cert_chain,
-				 keymaster_error_t *res)
+				 keymaster_error_t *res, bool *oob)
 {
 	uint8_t *start = out;
 	DMSG("%s %d", __func__, __LINE__);
@@ -854,20 +854,42 @@ int TA_serialize_cert_chain_akms(uint8_t *out, uint8_t *out_end,
 		return 0;
 	}
 
+	if (TA_is_out_of_bounds(out, out_end,
+				sizeof(cert_chain->entry_count))) {
+		EMSG("Exceeding end of output buffer");
+		*oob = true;
+		*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+		goto out;
+	}
 	TEE_MemMove(out, &cert_chain->entry_count,
 		    sizeof(cert_chain->entry_count));
 	out += SIZE_LENGTH_AKMS;
 
 	for (size_t i = 0; i < cert_chain->entry_count; i++) {
+		if (TA_is_out_of_bounds(out, out_end, SIZE_LENGTH_AKMS)) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto out;
+		}
 		TEE_MemMove(out, &cert_chain->entries[i].data_length,
 			    SIZE_LENGTH_AKMS);
 		out += SIZE_LENGTH_AKMS;
 
+		if (TA_is_out_of_bounds(out, out_end,
+					cert_chain->entries[i].data_length)) {
+			EMSG("Exceeding end of output buffer");
+			*oob = true;
+			*res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+			goto out;
+		}
 		TEE_MemMove(out, cert_chain->entries[i].data,
 			    cert_chain->entries[i].data_length);
 		out += cert_chain->entries[i].data_length;
 	}
 	*res = KM_ERROR_OK;
+
+out:
 	return out - start;
 }
 
