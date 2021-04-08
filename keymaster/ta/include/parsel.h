@@ -67,7 +67,7 @@ int TA_serialize_param_set(uint8_t *out, uint8_t *out_end,
 
 TEE_Result TA_serialize_rsa_keypair(uint8_t *out, uint8_t *out_end,
 				    uint32_t *out_size,
-				    const TEE_ObjectHandle key_obj);
+				    const TEE_ObjectHandle key_obj, bool *oob);
 
 TEE_Result TA_serialize_ec_keypair(uint8_t *out, uint8_t *out_end,
 				   uint32_t *out_size,
