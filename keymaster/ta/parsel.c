@@ -98,7 +98,7 @@ int TA_deserialize_blob_akms(uint8_t *in, uint8_t *end, keymaster_blob_t *blob,
 }
 
 static bool param_deserialize(keymaster_key_param_t *param, uint8_t **buf_ptr,
-			      const uint8_t *end, const uint8_t *indirect_base,
+			      uint8_t *end, const uint8_t *indirect_base,
 			      const uint8_t *indirect_end)
 {
 	uint32_t offset;
