@@ -220,7 +220,6 @@ static keymaster_error_t convert_epoch_to_date_str(uint32_t sec,
 	days_since_epoch = epoch;
 	/* Calculating WeekDay */
 	ntp_week_day = week_days[days_since_epoch % 7];
-	DMSG("ntp_week_day = %u", ntp_week_day);
 
 	/* ball parking year, may not be accurate! */
 	ntp_year = 1970 + (days_since_epoch / 365);
@@ -243,7 +242,6 @@ static keymaster_error_t convert_epoch_to_date_str(uint32_t sec,
 		month_days[1] = 29;
 		/* if current year is leap, set indicator to 1 */
 		leap_year_ind = 1;
-		DMSG("leap_year_ind = %u", leap_year_ind);
 	} else {
 		/* February = 28 days for non-leap years */
 		month_days[1] = 28;
@@ -272,8 +270,39 @@ static keymaster_error_t convert_epoch_to_date_str(uint32_t sec,
 	snprintf((char *)(t_str + 8), 3, "%02u", ntp_hour);
 	snprintf((char *)(t_str + 10), 3, "%02u", ntp_minute);
 	snprintf((char *)(t_str + 12), 3, "%02u", ntp_second);
+
 	DMSG("seconds since epoch: %" PRIu32, sec);
 	DMSG("Date string: %s", t_str);
+	switch (ntp_week_day) {
+	case 0:
+		DMSG("Sunday");
+		break;
+	case 1:
+		DMSG("Monday");
+		break;
+	case 2:
+		DMSG("Tuesday");
+		break;
+	case 3:
+		DMSG("Wednesday");
+		break;
+	case 4:
+		DMSG("Thursday");
+		break;
+	case 5:
+		DMSG("Friday");
+		break;
+	case 6:
+		DMSG("Saturday");
+		break;
+	default:
+		break;
+	}
+	if (leap_year_ind) {
+		DMSG("%04u is a leap year", ntp_year);
+	} else {
+		DMSG("%04u is not a leap year", ntp_year);
+	}
 
 	return KM_ERROR_OK;
 }
