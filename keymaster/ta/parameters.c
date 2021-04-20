@@ -353,17 +353,27 @@ keymaster_error_t TA_fill_characteristics(
 		case KM_TAG_DIGEST:
 		case KM_TAG_OS_VERSION:
 		case KM_TAG_OS_PATCHLEVEL:
+			if (MAX_ENFORCED_PARAMS_COUNT <=
+			    characteristics->hw_enforced.length)
+				return KM_ERROR_INVALID_KEY_BLOB;
 			TA_push_param(&characteristics->hw_enforced,
 				      params->params + i);
 			break;
 		case KM_TAG_USER_AUTH_TYPE:
 			if ((hw_authenticator_type_t)params->params[i]
-			    .key_param.enumerated == HW_AUTH_PASSWORD)
+			    .key_param.enumerated == HW_AUTH_PASSWORD) {
+				if (MAX_ENFORCED_PARAMS_COUNT <=
+				    characteristics->hw_enforced.length)
+					return KM_ERROR_INVALID_KEY_BLOB;
 				TA_push_param(&characteristics->hw_enforced,
 					      params->params + i);
-			else
+			} else {
+				if (MAX_ENFORCED_PARAMS_COUNT <=
+				    characteristics->sw_enforced.length)
+					return KM_ERROR_INVALID_KEY_BLOB;
 				TA_push_param(&characteristics->sw_enforced,
 					      params->params + i);
+			}
 			break;
 		case KM_TAG_ACTIVE_DATETIME:
 		case KM_TAG_ORIGINATION_EXPIRE_DATETIME:
@@ -373,6 +383,9 @@ keymaster_error_t TA_fill_characteristics(
 		case KM_TAG_CREATION_DATETIME:
 		case KM_TAG_INCLUDE_UNIQUE_ID:
 		case KM_TAG_EXPORTABLE:
+			if (MAX_ENFORCED_PARAMS_COUNT <=
+			    characteristics->sw_enforced.length)
+				return KM_ERROR_INVALID_KEY_BLOB;
 			TA_push_param(&characteristics->sw_enforced,
 				      params->params + i);
 			break;
