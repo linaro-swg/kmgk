@@ -40,47 +40,11 @@ int OpteeKeymaster::Initialize() {
         return err;
     }
 
-    // Try GetVersion2 first.
-    GetVersion2Request versionReq;
-    GetVersion2Response versionRsp = GetVersion2(versionReq);
-    if (versionRsp.error != KM_ERROR_OK) {
-        ALOGW("TA appears not to support GetVersion2, falling back (err = %d)", versionRsp.error);
-
-        /* This is NOT required for OP-TEE, ONLY Trusty */
-        /*
-        err = optee_keymaster_connect();
-        if (err) {
-            ALOGE("Failed to connect to optee keymaster %d", err);
-            return err;
-        }
-        */
-
-        GetVersionRequest versionReq;
-        GetVersionResponse versionRsp;
-        GetVersion(versionReq, &versionRsp);
-        if (versionRsp.error != KM_ERROR_OK) {
-            ALOGE("Failed to get TA version %d", versionRsp.error);
-            return -1;
-        } else {
-            keymaster_error_t error;
-            versionRsp.major_ver = 3;
-            versionRsp.minor_ver = 0;
-            versionRsp.subminor_ver = 0;
-            message_version_ = NegotiateMessageVersion(versionRsp, &error);
-            if (error != KM_ERROR_OK) {
-                ALOGE("Failed to negotiate message version %d", error);
-                return -1;
-            }
-        }
-    } else {
-        message_version_ = NegotiateMessageVersion(versionReq, versionRsp);
-    }
-
-    ConfigureRequest req(message_version());
+    ConfigureRequest req;
     req.os_version = GetOsVersion();
     req.os_patchlevel = GetOsPatchlevel();
 
-    ConfigureResponse rsp(message_version());
+    ConfigureResponse rsp;
     Configure(req, &rsp);
 
     if (rsp.error != KM_ERROR_OK) {
@@ -98,7 +62,7 @@ OpteeKeymaster::~OpteeKeymaster() {
     optee_keymaster_finalize();
 }
 
-static void ForwardCommand(enum keymaster_command command, const KeymasterMessage& req,
+static void ForwardCommand(enum keymaster_command command, const Serializable& req,
                            KeymasterResponse* rsp) {
     keymaster_error_t err;
     err = optee_keymaster_call(command, req, rsp);
@@ -220,27 +184,21 @@ void OpteeKeymaster::AbortOperation(const AbortOperationRequest& request,
 
 /* Methods for Keymaster 4.0 functionality -- not yet implemented */
 GetHmacSharingParametersResponse OpteeKeymaster::GetHmacSharingParameters() {
-    GetHmacSharingParametersResponse response(message_version());
+    GetHmacSharingParametersResponse response;
     response.error = KM_ERROR_UNIMPLEMENTED;
     return response;
 }
 
 ComputeSharedHmacResponse OpteeKeymaster::ComputeSharedHmac(
         const ComputeSharedHmacRequest& /* request */) {
-    ComputeSharedHmacResponse response(message_version());
+    ComputeSharedHmacResponse response;
     response.error = KM_ERROR_UNIMPLEMENTED;
     return response;
 }
 
 VerifyAuthorizationResponse OpteeKeymaster::VerifyAuthorization(
         const VerifyAuthorizationRequest& /* request */) {
-    VerifyAuthorizationResponse response(message_version());
-    response.error = KM_ERROR_UNIMPLEMENTED;
-    return response;
-}
-
-GetVersion2Response OpteeKeymaster::GetVersion2(const GetVersion2Request& /* request */) {
-    GetVersion2Response response(message_version());
+    VerifyAuthorizationResponse response;
     response.error = KM_ERROR_UNIMPLEMENTED;
     return response;
 }
