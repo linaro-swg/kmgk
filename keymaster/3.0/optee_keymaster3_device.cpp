@@ -415,7 +415,7 @@ Return<void>  OpteeKeymaster3Device::importKey(const hidl_vec<KeyParameter> &par
     ImportKeyRequest request;
     request.key_description.Reinitialize(KmParamSet(params));
     request.key_format = legacy_enum_conversion(keyFormat);
-    request.key_data = KeymasterKeyBlob(keyData.data(), keyData.size());
+    request.SetKeyMaterial(keyData.data(), keyData.size());
 
     ImportKeyResponse response;
     impl_->ImportKey(request, &response);
