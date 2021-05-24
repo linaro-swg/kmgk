@@ -206,6 +206,37 @@ out:
 	return res;
 }
 
+static keymaster_error_t TA_getVersion(TEE_Param params[TEE_NUM_PARAMS])
+{
+	uint8_t *out = NULL;
+	uint8_t *out_end = NULL;
+	size_t out_size = 0;
+	keymaster_error_t res = KM_ERROR_OK;
+	bool oob = false; /* out of bounds flag */
+
+	DMSG("%s %d", __func__, __LINE__);
+
+	out = (uint8_t *)params[1].memref.buffer;
+	out_size = (size_t)params[1].memref.size; /* limited to 8192 */
+	out_end = out + out_size;
+	if (!out) {
+		EMSG("Unexpected null pointer");
+		return KM_ERROR_UNEXPECTED_NULL_POINTER;
+	}
+	if (out_size < KM_RECV_BUF_SIZE) {
+		EMSG("Insufficient output buffer space!");
+		return KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
+	out += TA_serialize_rsp_err(out, out_end, &res, &oob);
+	if (oob) {
+		EMSG("Out of output buffer space");
+		res = KM_ERROR_INSUFFICIENT_BUFFER_SPACE;
+	}
+	params[1].memref.size = out - (uint8_t *)params[1].memref.buffer;
+
+	return res;
+}
+
 /* Adds caller-provided entropy to the pool */
 static keymaster_error_t TA_addRngEntropy(TEE_Param params[TEE_NUM_PARAMS])
 {
@@ -1929,6 +1960,9 @@ TEE_Result TA_InvokeCommandEntryPoint(void *sess_ctx __unused,
 	case KM_CONFIGURE:
 		DMSG("KM_CONFIGURE");
 		return TA_configure(params);
+	case KM_GET_VERSION:
+		DMSG("KM_GET_VERSION");
+		return TA_getVersion(params);
 	case KM_ADD_RNG_ENTROPY:
 		DMSG("KM_ADD_RNG_ENTROPY");
 		return TA_addRngEntropy(params);
