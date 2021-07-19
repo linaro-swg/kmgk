@@ -711,7 +711,8 @@ int TA_serialize_auth_set(uint8_t *out, uint8_t *out_end,
 
 exit:
 	DMSG("auth_set size: %d", serialized_auth_set_size);
-	TEE_Free(addr_indirect_data);
+        if (addr_indirect_data)
+                TEE_Free(addr_indirect_data);
 	if (!*oob &&
 	    TA_is_out_of_bounds(start, out_end, serialized_auth_set_size)) {
 		EMSG("Exceeding end of output buffer");
