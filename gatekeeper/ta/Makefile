@@ -16,6 +16,9 @@
 CFG_TEE_TA_LOG_LEVEL ?= 3
 CPPFLAGS += -DCFG_TEE_TA_LOG_LEVEL=$(CFG_TEE_TA_LOG_LEVEL)
 
+# Enable compatibility with TEE Internal Core API v1.1
+CFG_TA_OPTEE_CORE_API_COMPAT_1_1=y
+
 # The UUID for the Trusted Application
 BINARY = 4d573443-6a56-4272-ac6f-2425af9ef9bb
 
