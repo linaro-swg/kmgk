@@ -1,0 +1,5 @@
+service vendor.keymint-optee /vendor/bin/hw/android.hardware.security.keymint-service.optee
+    class early_hal
+    user system
+    group system drmrpc shell
+
