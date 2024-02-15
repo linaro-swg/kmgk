@@ -36,24 +36,25 @@ LOCAL_CFLAGS += -DANDROID_BUILD
 
 LOCAL_SRC_FILES := \
 	3.0/service.cpp \
-	3.0/optee_keymaster3_device.cpp \
+	3.0/OpteeKeymaster3Device.cpp \
 	ipc/optee_keymaster_ipc.cpp \
-	optee_keymaster.cpp
+	OpteeKeymaster.cpp
 
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/include
 
 LOCAL_SHARED_LIBRARIES := \
-	libteec \
-	liblog \
-	libhidlbase \
-	libhidltransport \
-	libhardware \
-	libutils \
-	libcutils \
-	libkeymaster_messages \
-	libkeymaster3device \
-	android.hardware.keymaster@3.0
+        liblog \
+        libcutils \
+        libdl \
+        libbase \
+        libutils \
+        libhardware \
+        libhidlbase \
+        libkeymaster_messages \
+        libkeymaster3device \
+        libteec \
+        android.hardware.keymaster@3.0
 
 include $(BUILD_EXECUTABLE)
 

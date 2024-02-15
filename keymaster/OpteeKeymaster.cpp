@@ -1,4 +1,5 @@
 /*
+ * Copyright 2018 The Android Open Source Project
  * Copyright (C) 2017 GlobalLogic
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,61 +15,52 @@
  * limitations under the License.
  */
 
-#include <log/log.h>
+#define LOG_TAG "optee_keymaster_hal"
+#include <android-base/logging.h>
+
 #include <keymaster/android_keymaster_messages.h>
 #include <keymaster/keymaster_configuration.h>
-#include <optee_keymaster/optee_keymaster.h>
+#include <optee_keymaster/OpteeKeymaster.h>
 #include <optee_keymaster/ipc/optee_keymaster_ipc.h>
-
-#undef LOG_TAG
-#define LOG_TAG "OpteeKeymaster_cpp"
 
 namespace keymaster {
 
-int OpteeKeymaster::Initialize() {
+int OpteeKeymaster::Initialize(KmVersion version) {
     int err;
 
-    err = optee_keymaster_initialize();
-    if (err) {
-        ALOGE("Failed to connect to optee keymaster %d", err);
-        return err;
-    }
+    LOG(INFO) << "Initializing OpteeKeymaster as KmVersion: " << (int)version;
 
     err = optee_keymaster_connect();
     if (err) {
-        ALOGE("Failed to connect to optee keymaster %d", err);
+        LOG(ERROR) << "Failed to connect to optee keymaster (1st try)" << err;
         return err;
     }
 
     // Try GetVersion2 first.
     GetVersion2Request versionReq;
+    versionReq.max_message_version = MessageVersion(version);
     GetVersion2Response versionRsp = GetVersion2(versionReq);
     if (versionRsp.error != KM_ERROR_OK) {
-        ALOGW("TA appears not to support GetVersion2, falling back (err = %d)", versionRsp.error);
+        LOG(WARNING) << "TA appears not to support GetVersion2, falling back (err = "
+                     << versionRsp.error << ")";
 
-        /* This is NOT required for OP-TEE, ONLY Trusty */
-        /*
         err = optee_keymaster_connect();
         if (err) {
-            ALOGE("Failed to connect to optee keymaster %d", err);
+            LOG(FATAL) << "Failed to connect to optee keymaster (2nd try) " << err;
             return err;
         }
-        */
 
         GetVersionRequest versionReq;
         GetVersionResponse versionRsp;
         GetVersion(versionReq, &versionRsp);
         if (versionRsp.error != KM_ERROR_OK) {
-            ALOGE("Failed to get TA version %d", versionRsp.error);
+            LOG(FATAL) << "Failed to get TA version " << versionRsp.error;
             return -1;
         } else {
             keymaster_error_t error;
-            versionRsp.major_ver = 3;
-            versionRsp.minor_ver = 0;
-            versionRsp.subminor_ver = 0;
             message_version_ = NegotiateMessageVersion(versionRsp, &error);
             if (error != KM_ERROR_OK) {
-                ALOGE("Failed to negotiate message version %d", error);
+                LOG(FATAL) << "Failed to negotiate message version " << error;
                 return -1;
             }
         }
@@ -84,8 +76,18 @@ int OpteeKeymaster::Initialize() {
     Configure(req, &rsp);
 
     if (rsp.error != KM_ERROR_OK) {
-        ALOGE("Failed to configure keymaster %d", rsp.error);
+        LOG(FATAL) << "Failed to configure keymaster " << rsp.error;
         return -1;
+    }
+
+    // Set the vendor patchlevel to value retrieved from system property (which
+    // requires SELinux permission).
+    ConfigureVendorPatchlevelRequest vendor_req(message_version());
+    vendor_req.vendor_patchlevel = GetVendorPatchlevel();
+    ConfigureVendorPatchlevelResponse vendor_rsp = ConfigureVendorPatchlevel(vendor_req);
+    if (vendor_rsp.error != KM_ERROR_OK) {
+        LOG(ERROR) << "Failed to configure keymaster vendor patchlevel: " << vendor_rsp.error;
+        // Don't fail if this message isn't understood.
     }
 
     return 0;
@@ -95,15 +97,14 @@ OpteeKeymaster::OpteeKeymaster() {}
 
 OpteeKeymaster::~OpteeKeymaster() {
     optee_keymaster_disconnect();
-    optee_keymaster_finalize();
 }
 
 static void ForwardCommand(enum keymaster_command command, const KeymasterMessage& req,
                            KeymasterResponse* rsp) {
     keymaster_error_t err;
-    err = optee_keymaster_call(command, req, rsp);
+    err = optee_keymaster_send(command, req, rsp);
     if (err != KM_ERROR_OK) {
-        ALOGE("Failed to send cmd %d err: %d", command, err);
+        LOG(ERROR) << "Cmd " << command << " returned error: " << err;
         rsp->error = err;
     }
 }
@@ -153,14 +154,34 @@ void OpteeKeymaster::Configure(const ConfigureRequest& request, ConfigureRespons
 
 void OpteeKeymaster::GenerateKey(const GenerateKeyRequest& request,
                                   GenerateKeyResponse* response) {
-    GenerateKeyRequest datedRequest(request.message_version);
-    datedRequest.key_description = request.key_description;
+    if (message_version_ < 4) {
+        // Pre-KeyMint we need to add TAG_CREATION_DATETIME if not provided by the caller.
+        GenerateKeyRequest datedRequest(request.message_version);
+        datedRequest.key_description = request.key_description;
 
-    if (!request.key_description.Contains(TAG_CREATION_DATETIME)) {
-        datedRequest.key_description.push_back(TAG_CREATION_DATETIME, java_time(time(NULL)));
+        if (!request.key_description.Contains(TAG_CREATION_DATETIME)) {
+            datedRequest.key_description.push_back(TAG_CREATION_DATETIME, java_time(time(NULL)));
+        }
+
+        ForwardCommand(KM_GENERATE_KEY, datedRequest, response);
+    } else {
+        ForwardCommand(KM_GENERATE_KEY, request, response);
     }
+}
 
-    ForwardCommand(KM_GENERATE_KEY, datedRequest, response);
+void OpteeKeymaster::GenerateRkpKey(const GenerateRkpKeyRequest& request,
+                                     GenerateRkpKeyResponse* response) {
+    ForwardCommand(KM_GENERATE_RKP_KEY, request, response);
+}
+
+void OpteeKeymaster::GenerateCsr(const GenerateCsrRequest& request,
+                                  GenerateCsrResponse* response) {
+    ForwardCommand(KM_GENERATE_CSR, request, response);
+}
+
+void OpteeKeymaster::GenerateCsrV2(const GenerateCsrV2Request& request,
+                                    GenerateCsrV2Response* response) {
+    ForwardCommand(KM_GENERATE_CSR_V2, request, response);
 }
 
 void OpteeKeymaster::GetKeyCharacteristics(const GetKeyCharacteristicsRequest& request,
@@ -218,30 +239,61 @@ void OpteeKeymaster::AbortOperation(const AbortOperationRequest& request,
     ForwardCommand(KM_ABORT_OPERATION, request, response);
 }
 
-/* Methods for Keymaster 4.0 functionality -- not yet implemented */
 GetHmacSharingParametersResponse OpteeKeymaster::GetHmacSharingParameters() {
+    GetHmacSharingParametersRequest request(message_version());
     GetHmacSharingParametersResponse response(message_version());
-    response.error = KM_ERROR_UNIMPLEMENTED;
+    ForwardCommand(KM_GET_HMAC_SHARING_PARAMETERS, request, &response);
     return response;
 }
 
 ComputeSharedHmacResponse OpteeKeymaster::ComputeSharedHmac(
-        const ComputeSharedHmacRequest& /* request */) {
+        const ComputeSharedHmacRequest& request) {
     ComputeSharedHmacResponse response(message_version());
-    response.error = KM_ERROR_UNIMPLEMENTED;
+    ForwardCommand(KM_COMPUTE_SHARED_HMAC, request, &response);
     return response;
 }
 
 VerifyAuthorizationResponse OpteeKeymaster::VerifyAuthorization(
-        const VerifyAuthorizationRequest& /* request */) {
+        const VerifyAuthorizationRequest& request) {
     VerifyAuthorizationResponse response(message_version());
-    response.error = KM_ERROR_UNIMPLEMENTED;
+    ForwardCommand(KM_VERIFY_AUTHORIZATION, request, &response);
     return response;
 }
 
-GetVersion2Response OpteeKeymaster::GetVersion2(const GetVersion2Request& /* request */) {
+GetVersion2Response OpteeKeymaster::GetVersion2(const GetVersion2Request& request) {
     GetVersion2Response response(message_version());
-    response.error = KM_ERROR_UNIMPLEMENTED;
+    ForwardCommand(KM_GET_VERSION_2, request, &response);
+    return response;
+}
+
+EarlyBootEndedResponse OpteeKeymaster::EarlyBootEnded() {
+    EarlyBootEndedResponse response(message_version());
+    ForwardCommand(KM_EARLY_BOOT_ENDED, EarlyBootEndedRequest(message_version()), &response);
+    return response;
+}
+
+DeviceLockedResponse OpteeKeymaster::DeviceLocked(const DeviceLockedRequest& request) {
+    DeviceLockedResponse response(message_version());
+    ForwardCommand(KM_DEVICE_LOCKED, request, &response);
+    return response;
+}
+
+ConfigureVendorPatchlevelResponse OpteeKeymaster::ConfigureVendorPatchlevel(
+        const ConfigureVendorPatchlevelRequest& request) {
+    ConfigureVendorPatchlevelResponse response(message_version());
+    ForwardCommand(KM_CONFIGURE_VENDOR_PATCHLEVEL, request, &response);
+    return response;
+}
+
+GetRootOfTrustResponse OpteeKeymaster::GetRootOfTrust(const GetRootOfTrustRequest& request) {
+    GetRootOfTrustResponse response(message_version());
+    ForwardCommand(KM_GET_ROOT_OF_TRUST, request, &response);
+    return response;
+}
+
+GetHwInfoResponse OpteeKeymaster::GetHwInfo() {
+    GetHwInfoResponse response(message_version());
+    ForwardCommand(KM_GET_HW_INFO, GetHwInfoRequest(message_version()), &response);
     return response;
 }
 

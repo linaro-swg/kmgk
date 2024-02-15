@@ -15,15 +15,15 @@
  ** limitations under the License.
  */
 
-#ifndef OPTEE_KEYMASTER3_DEVICE_H
-#define OPTEE_KEYMASTER3_DEVICE_H
+#ifndef HIDL_android_hardware_keymaster_V3_0_OpteeKeymaster3Device_H_
+#define HIDL_android_hardware_keymaster_V3_0_OpteeKeymaster3Device_H_
 
 #include <android/hardware/keymaster/3.0/IKeymasterDevice.h>
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
 
-#include <optee_keymaster/optee_keymaster.h>
+#include <optee_keymaster/OpteeKeymaster.h>
 
 namespace keymaster {
 
@@ -75,15 +75,10 @@ class OpteeKeymaster3Device : public IKeymasterDevice {
                         finish_cb _hidl_cb) override;
     Return<ErrorCode> abort(uint64_t operationHandle) override;
 
-
   private:
     std::unique_ptr<OpteeKeymaster> impl_;
-	int osVersion(uint32_t *in);
-	int osPatchlevel(uint32_t *in);
-	int verifiedBootState(uint8_t *in);
 };
-
 
 }  // namespace keymaster
 
-#endif  // OPTEE_KEYMASTER3_DEVICE_H
+#endif  // HIDL_android_hardware_keymaster_V3_0_OpteeKeymaster3Device_H_
