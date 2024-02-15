@@ -27,22 +27,12 @@
 
 #undef LOG_TAG
 #define LOG_TAG "OpteeKeymaster_ipc"
+#define TA_KEYMASTER_UUID { 0xdba51a17, 0x0563, 0x11e7, \
+                          { 0x93, 0xb1, 0x6f, 0xa7, 0xb0, 0x07, 0x1a, 0x51} }
 
 static TEEC_Context ctx;
 static TEEC_Session sess;
 static bool connected = false;
-
-int optee_keymaster_initialize(void) {
-    TEEC_Result res;
-
-    res = TEEC_InitializeContext(NULL, &ctx);
-    if (res != TEEC_SUCCESS) {
-        ALOGE("TEEC_InitializeContext failed with code 0x%x", res);
-        return (int)res;
-    }
-
-    return 0;
-}
 
 int optee_keymaster_connect(void) {
     TEEC_Result res;
@@ -52,6 +42,12 @@ int optee_keymaster_connect(void) {
     if (connected) {
         ALOGE("Connection with trustled application already established");
         return false;
+    }
+
+    res = TEEC_InitializeContext(NULL, &ctx);
+    if (res != TEEC_SUCCESS) {
+        ALOGE("TEEC_InitializeContext failed with code 0x%x", res);
+        return (int)res;
     }
 
     /* Open a session to the TA */
@@ -69,11 +65,8 @@ int optee_keymaster_connect(void) {
 
 void optee_keymaster_disconnect(void) {
     TEEC_CloseSession(&sess);
-    connected  = false;
-}
-
-void optee_keymaster_finalize(void) {
     TEEC_FinalizeContext(&ctx);
+    connected = false;
 }
 
 const char* keymaster_error_message(uint32_t error) {
@@ -195,14 +188,12 @@ const char* keymaster_error_message(uint32_t error) {
     }
 }
 
-keymaster_error_t optee_keymaster_call(uint32_t cmd,
-				       const keymaster::Serializable& req,
-				       keymaster::KeymasterResponse* rsp) {
+keymaster_error_t optee_keymaster_send(uint32_t command, const keymaster::Serializable& req,
+                                       keymaster::KeymasterResponse* rsp) {
     TEEC_Operation op;
     uint32_t res;
     uint32_t err_origin;
 
-    ALOGD("%s %d %u\n", __func__, __LINE__, cmd);
     if (!connected) {
 	ALOGE("Keystore trusted application is not connected");
 	return KM_ERROR_SECURE_HW_COMMUNICATION_FAILED;
@@ -234,10 +225,10 @@ keymaster_error_t optee_keymaster_call(uint32_t cmd,
 	op.params[1].tmpref.buffer = (void*)recv_buf;
 	op.params[1].tmpref.size   = rsp_size;
 
-    res = TEEC_InvokeCommand(&sess, cmd, &op, &err_origin);
+    res = TEEC_InvokeCommand(&sess, command, &op, &err_origin);
     if (res != TEEC_SUCCESS) {
-	ALOGI("TEEC_InvokeCommand cmd %d failed with code 0x%08x (%s) origin "
-	      "0x%08x", cmd, res, keymaster_error_message(res), err_origin);
+	ALOGI("TEEC_InvokeCommand command %d failed with code 0x%08x (%s) origin "
+	      "0x%08x", command, res, keymaster_error_message(res), err_origin);
 	if (res == TEEC_ERROR_TARGET_DEAD) {
 		optee_keymaster_disconnect();
 		optee_keymaster_connect();
