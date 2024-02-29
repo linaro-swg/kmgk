@@ -54,7 +54,7 @@ OpteeKeyMintOperation::~OpteeKeyMintOperation() {
 
 ScopedAStatus OpteeKeyMintOperation::updateAad(
         const vector<uint8_t>& input, const optional<HardwareAuthToken>& authToken,
-        const optional<TimeStampToken>& /* timestampToken */) {
+        const optional<TimeStampToken>&) {
     UpdateOperationRequest request(impl_->message_version());
     request.op_handle = opHandle_;
     request.additional_params.push_back(TAG_ASSOCIATED_DATA, input.data(), input.size());
