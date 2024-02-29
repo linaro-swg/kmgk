@@ -217,7 +217,7 @@ OpteeKeymaster3Device::~OpteeKeymaster3Device() {}
 Return<void> OpteeKeymaster3Device::getHardwareFeatures(getHardwareFeatures_cb _hidl_cb) {
     _hidl_cb(true /* is_secure */, true /* supports_ec */,
              true /* supports_symmetric_cryptography */, true /* supports_attestation */,
-             true /* supportsAllDigests */, "OpteeKeymaster", "OP-TEE Foundation");
+             true /* supportsAllDigests */, "OpteeKeymaster", "OP-TEE");
     return Void();
 }
 
