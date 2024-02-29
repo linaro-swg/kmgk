@@ -24,8 +24,7 @@
 __BEGIN_DECLS
 
 const uint32_t OPTEE_KEYMASTER_RECV_BUF_SIZE = 2 * PAGE_SIZE;
-const uint32_t OPTEE_KEYMASTER_SEND_BUF_SIZE =
-        (PAGE_SIZE - sizeof(struct keymaster_message) - 16 /* tipc header */);
+const uint32_t OPTEE_KEYMASTER_SEND_BUF_SIZE = 2 * PAGE_SIZE;
 
 int optee_keymaster_connect(void);
 int optee_keymaster_call(uint32_t cmd, void* in, uint32_t in_size, uint8_t* out,
