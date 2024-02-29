@@ -143,8 +143,8 @@ ScopedAStatus OpteeKeyMintDevice::generateKey(const vector<KeyParameter>& keyPar
 
 ScopedAStatus OpteeKeyMintDevice::getKeyCharacteristics(
         const vector<uint8_t>& keyBlob,
-        const vector<uint8_t>& clientId,  //
-        const vector<uint8_t>& appData,   //
+        const vector<uint8_t>& clientId,
+        const vector<uint8_t>& appData,
         vector<KeyCharacteristics>* characteristics) {
     keymaster::GetKeyCharacteristicsRequest request(impl_->message_version());
     request.SetKeyMaterial(keyBlob.data(), keyBlob.size());
@@ -192,10 +192,10 @@ ScopedAStatus OpteeKeyMintDevice::importKey(const vector<KeyParameter>& keyParam
 }
 
 ScopedAStatus OpteeKeyMintDevice::importWrappedKey(const vector<uint8_t>& wrappedKeyData,
-                                                    const vector<uint8_t>& wrappingKeyBlob,  //
+                                                    const vector<uint8_t>& wrappingKeyBlob,
                                                     const vector<uint8_t>& maskingKey,
                                                     const vector<KeyParameter>& unwrappingParams,
-                                                    int64_t passwordSid,  //
+                                                    int64_t passwordSid,
                                                     int64_t biometricSid,
                                                     KeyCreationResult* creationResult) {
     keymaster::ImportWrappedKeyRequest request(impl_->message_version());
