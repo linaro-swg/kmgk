@@ -408,12 +408,9 @@ Return<void> OpteeKeymaster3Device::update(uint64_t operationHandle,
     size_t inp_size = input.size();
     size_t ser_size = request.SerializedSize();
 
-    if (ser_size > OPTEE_KEYMASTER_SEND_BUF_SIZE) {
+    if (ser_size + inp_size > OPTEE_KEYMASTER_SEND_BUF_SIZE) {
         response.error = KM_ERROR_INVALID_INPUT_LENGTH;
     } else {
-        if (ser_size + inp_size > OPTEE_KEYMASTER_SEND_BUF_SIZE) {
-            inp_size = OPTEE_KEYMASTER_SEND_BUF_SIZE - ser_size;
-        }
         request.input.Reinitialize(input.data(), inp_size);
 
         impl_->UpdateOperation(request, &response);
